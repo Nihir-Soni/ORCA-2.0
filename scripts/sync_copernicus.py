@@ -103,6 +103,13 @@ def main():
         df_curr = curr_grid[["uo", "vo"]].to_dataframe().dropna()
         df_chl = chl_grid[["CHL"]].to_dataframe().dropna()
         
+        # Drop redundant coordinate columns to prevent overlap during join
+        for col in ['time', 'depth']:
+            if col in df_curr.columns:
+                df_curr = df_curr.drop(columns=[col])
+            if col in df_chl.columns:
+                df_chl = df_chl.drop(columns=[col])
+        
         # Join dataframes on latitude, longitude
         df = df_curr.join(df_chl, how='inner')
         
