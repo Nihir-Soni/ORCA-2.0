@@ -32,12 +32,31 @@ def main():
         print("Error: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set.")
         sys.exit(1)
 
+    copernicus_user = os.getenv("COPERNICUS_USERNAME")
+    copernicus_pass = os.getenv("COPERNICUS_PASSWORD")
+
+    if not copernicus_user or not copernicus_pass:
+        print("Error: COPERNICUS_USERNAME and COPERNICUS_PASSWORD environment variables must be set.")
+        sys.exit(1)
+
     print("Opening Copernicus datasets...")
     try:
-        ds_curr = cm.open_dataset(dataset_id=CURRENT_PRODUCT)
-        ds_chl = cm.open_dataset(dataset_id=CHLOROPHYLL_PRODUCT)
+        ds_curr = cm.open_dataset(
+            dataset_id=CURRENT_PRODUCT,
+            username=copernicus_user,
+            password=copernicus_pass
+        )
+        ds_chl = cm.open_dataset(
+            dataset_id=CHLOROPHYLL_PRODUCT,
+            username=copernicus_user,
+            password=copernicus_pass
+        )
     except Exception as e:
         print(f"Failed to open Copernicus dataset: {e}")
+        sys.exit(1)
+        
+    if ds_curr is None or ds_chl is None:
+        print("Error: Copernicus SDK returned None instead of a dataset. Authentication or dataset access failed.")
         sys.exit(1)
 
     print("Subsetting to latest slice...")
