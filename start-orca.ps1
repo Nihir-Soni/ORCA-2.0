@@ -50,10 +50,10 @@ Write-Host ""
 Write-Host "  Ctrl+C to stop." -ForegroundColor DarkGray
 Write-Host ""
 
-if (-not ($env:ORCA_SMS_ACCOUNT_SID -and $env:ORCA_SMS_AUTH_TOKEN -and $env:ORCA_SMS_FROM)) {
-    Write-Host "  SMS       : not configured (SOS will prepare, but not deliver, SMS)" -ForegroundColor Yellow
+if (-not $env:TEXTBEE_API_KEY) {
+    Write-Host "  SMS       : Provider missing (SOS will simulate)" -ForegroundColor Yellow
 } else {
-    Write-Host "  SMS       : Twilio delivery configured" -ForegroundColor Green
+    Write-Host "  SMS       : TextBee delivery configured" -ForegroundColor Green
 }
 
 $listener = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue

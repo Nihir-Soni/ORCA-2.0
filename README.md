@@ -89,13 +89,12 @@ locally and the app degrades gracefully without it.)
 ### SOS SMS delivery
 
 The SOS flow always builds and displays the emergency message. Actual phone
-delivery requires a Twilio account and verified sender/recipient numbers. Set
+delivery requires a TextBee API key. Set
 these PowerShell variables before starting ORCA:
 
 ```powershell
-$env:ORCA_SMS_ACCOUNT_SID = "AC..."
-$env:ORCA_SMS_AUTH_TOKEN = "..."
-$env:ORCA_SMS_FROM = "+1..."
+$env:TEXTBEE_API_KEY = "txb_..."
+$env:TEXTBEE_DEVICE_ID = "..." # optional
 $env:ORCA_SMS_TO = "+91..." # optional; defaults to the configured demo recipient
 .\start-orca.ps1
 ```

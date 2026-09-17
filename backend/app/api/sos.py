@@ -50,24 +50,35 @@ def _phone_number(value: str) -> str:
 
 
 def _send_sms(body: str) -> tuple[bool, str, Optional[str]]:
-    """Send through Twilio when configured; retain a truthful demo fallback."""
-    account_sid = os.getenv("ORCA_SMS_ACCOUNT_SID", "").strip()
-    auth_token = os.getenv("ORCA_SMS_AUTH_TOKEN", "").strip()
-    sender = os.getenv("ORCA_SMS_FROM", "").strip()
-    if not all((account_sid, auth_token, sender)):
+    """Send through TextBee when configured; retain a truthful demo fallback."""
+    api_key = os.getenv("TEXTBEE_API_KEY", "").strip()
+    if not api_key:
         return False, "SMS provider is not configured.", None
 
-    endpoint = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
+    device_id = os.getenv("TEXTBEE_DEVICE_ID", "").strip()
+    endpoint = "https://api.textbee.dev/api/v1/gateway/send-sms"
+    
+    payload = {
+        "recipients": [_phone_number(SOS_RECIPIENT)],
+        "message": body
+    }
+    if device_id:
+        payload["deviceId"] = device_id
+
+    headers = {
+        "x-api-key": api_key,
+        "Content-Type": "application/json"
+    }
+
     try:
         response = httpx.post(
             endpoint,
-            data={"From": sender, "To": _phone_number(SOS_RECIPIENT), "Body": body},
-            auth=(account_sid, auth_token),
+            json=payload,
+            headers=headers,
             timeout=10.0,
         )
         if response.is_success:
-            sid = response.json().get("sid")
-            return True, "Emergency SMS sent.", sid
+            return True, "Emergency SMS sent.", None
         return False, f"SMS provider rejected the message ({response.status_code}).", None
     except httpx.HTTPError:
         return False, "SMS provider could not be reached.", None
