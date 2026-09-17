@@ -31,6 +31,9 @@ class CopernicusProvider(BaseProvider):
         self.username = os.getenv("COPERNICUS_USERNAME")
         self.password = os.getenv("COPERNICUS_PASSWORD")
         self._lock = threading.Lock()
+        self._value_cache_lock = threading.Lock()
+        self._current_cache: Dict[Tuple[float, float], Tuple[float, Tuple[float, float]]] = {}
+        self._chlorophyll_cache: Dict[Tuple[float, float], Tuple[float, float]] = {}
         
         self._ds_current = None
         self._ds_chlorophyll = None
@@ -80,27 +83,28 @@ class CopernicusProvider(BaseProvider):
         if ds is None:
             return None
 
+        key = (round(lat, 2), round(lon, 2))
         try:
-            # Extract nearest point
-            subset = ds.sel(latitude=lat, longitude=lon, method="nearest")
-            
-            # If there's a time dimension, select nearest to 'when'
-            if 'time' in subset.dims:
-                # Need to convert 'when' to a format xarray/pandas understands for selection, 
-                # but for simplicity in NRT, taking the last available or nearest is fine.
-                # Use .isel(time=-1) to just get the latest forecast step if when is close to now,
-                # or properly select nearest time:
-                # Make sure datetime is timezone naive if the dataset is naive, but let's just pick latest.
-                subset = subset.isel(depth=0, time=-1) # Assuming surface is depth=0
-            elif 'depth' in subset.dims:
-                subset = subset.isel(depth=0)
-                
-            u = float(subset["uo"].values)
-            v = float(subset["vo"].values)
-            
-            if math.isnan(u) or math.isnan(v):
-                return None
-                
+            with self._value_cache_lock:
+                now = time.monotonic()
+                cached = self._current_cache.get(key)
+                if cached and cached[0] > now:
+                    u, v = cached[1]
+                else:
+                    # Extract nearest point from the latest available time slice.
+                    subset = ds.sel(latitude=lat, longitude=lon, method="nearest")
+                    if 'time' in subset.dims:
+                        subset = subset.isel(depth=0, time=-1) # Assuming surface is depth=0
+                    elif 'depth' in subset.dims:
+                        subset = subset.isel(depth=0)
+
+                    u = float(subset["uo"].values)
+                    v = float(subset["vo"].values)
+
+                    if math.isnan(u) or math.isnan(v):
+                        return None
+                    self._current_cache[key] = (now + self.CACHE_TTL_CURRENT, (u, v))
+
             speed, direction = self._convert_uv_to_speed_direction(u, v)
             
             return ProviderResponse(
@@ -129,17 +133,25 @@ class CopernicusProvider(BaseProvider):
         if ds is None:
             return None
             
+        key = (round(lat, 2), round(lon, 2))
         try:
-            subset = ds.sel(latitude=lat, longitude=lon, method="nearest")
-            
-            if 'time' in subset.dims:
-                subset = subset.isel(time=-1)
-                
-            chl = float(subset["CHL"].values)
-            
-            if math.isnan(chl):
-                return None
-                
+            with self._value_cache_lock:
+                now = time.monotonic()
+                cached = self._chlorophyll_cache.get(key)
+                if cached and cached[0] > now:
+                    chl = cached[1]
+                else:
+                    subset = ds.sel(latitude=lat, longitude=lon, method="nearest")
+
+                    if 'time' in subset.dims:
+                        subset = subset.isel(time=-1)
+
+                    chl = float(subset["CHL"].values)
+
+                    if math.isnan(chl):
+                        return None
+                    self._chlorophyll_cache[key] = (now + self.CACHE_TTL_CHLOROPHYLL, chl)
+
             return ProviderResponse(
                 data={"chlorophyll_mg_m3": round(chl, 4)},
                 metadata=ProviderMetadata(
