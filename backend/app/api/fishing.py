@@ -7,6 +7,7 @@ two days look like — with all of it also written in plain language.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -33,7 +34,7 @@ def _blocking_zone(lat: float, lon: float) -> Optional[Dict]:
     return None
 
 
-def _safe_window_hours(loc: Location, start: datetime) -> float:
+def _safe_window_hours(loc: Location, start: datetime, gis_data: dict) -> float:
     """How many consecutive hours from `start` stay at or below MODERATE risk."""
     hours = 0.0
     for h in range(0, 14):
@@ -41,9 +42,9 @@ def _safe_window_hours(loc: Location, start: datetime) -> float:
         weather = weather_agent.run(loc, dt)
         ocean = ocean_agent.run(loc, dt)
         cyclone = cyclone_agent.run(loc, dt)
-        gis = gis_agent.run(loc, dt)
+        
         assessment = risk_agent.run(loc, dt, weather=weather.data, ocean=ocean.data,
-                                    cyclone=cyclone.data, gis=gis.data, sources=[],
+                                    cyclone=cyclone.data, gis=gis_data, sources=[],
                                     mode=weather.mode)
         if assessment.data.get("category") in ("HIGH", "EXTREME"):
             break
@@ -107,10 +108,17 @@ def fishing_outlook(
     loc = Location(name=port["name"], latitude=lat, longitude=lon, state=port["state"])
 
     # ---- current safety picture -----------------------------------------
-    weather = weather_agent.run(loc, now)
-    ocean = ocean_agent.run(loc, now)
-    cyclone = cyclone_agent.run(loc, now)
-    gis = gis_agent.run(loc, now)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        weather_fut = pool.submit(weather_agent.run, loc, now)
+        ocean_fut = pool.submit(ocean_agent.run, loc, now)
+        cyclone_fut = pool.submit(cyclone_agent.run, loc, now)
+        gis_fut = pool.submit(gis_agent.run, loc, now)
+        
+        weather = weather_fut.result()
+        ocean = ocean_fut.result()
+        cyclone = cyclone_fut.result()
+        gis = gis_fut.result()
+
     risk_res = risk_agent.run(loc, now, weather=weather.data, ocean=ocean.data,
                               cyclone=cyclone.data, gis=gis.data,
                               sources=[weather.source, ocean.source], mode=weather.mode)
@@ -155,7 +163,7 @@ def fishing_outlook(
                 probability_pct=top_zone["probability"],
                 distance_km=top_zone["distance_km"],
                 travel_minutes=int(recommended.get("eta_minutes", 90)),
-                safe_window_hours=_safe_window_hours(loc, now),
+                safe_window_hours=_safe_window_hours(loc, now, gis.data),
             )
             # "Return before HH:MM, because..." — the end of the safe window
             # as a clock time a fisher can hold in his head, with the reason.
