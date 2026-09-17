@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Query
 
-from ..agents import (cyclone_agent, gis_agent, ocean_agent, risk_agent,
+from ..agents import (cyclone_agent, gis_agent, ocean_agent, pfz_agent, risk_agent,
                       route_agent, weather_agent)
 from ..data import demo_store
 from ..data.demo_store import IST, now_ist
@@ -72,10 +72,13 @@ def _zone_payload(loc: Location, zones: List[Dict], ambient_sst: Optional[float]
             z.get("sst_c"), z.get("chlorophyll_mg_m3"), z["distance_km"])
         z["confidence"] = round(result["probability"] / 100.0, 2)
         z["value_score"] = fishing.value_score(result["probability"], z["distance_km"])
-        z["rationale"] = (
-            f"Chlorophyll {z.get('chlorophyll_mg_m3')} mg/m3 at {z.get('sst_c')} deg C, "
-            f"{round(z['distance_km'])} km {z['bearing']}."
-        )
+        if "rationale" in z and z["rationale"]:
+            z["rationale"] = f"{z['rationale']}, {round(z['distance_km'])} km {z['bearing']}."
+        else:
+            z["rationale"] = (
+                f"Chlorophyll {z.get('chlorophyll_mg_m3')} mg/m3 at {z.get('sst_c')} deg C, "
+                f"{round(z['distance_km'])} km {z['bearing']}."
+            )
         scored.append(z)
 
     # Numbering follows the chance of fish, so "area 1" always means "best
@@ -108,16 +111,18 @@ def fishing_outlook(
     loc = Location(name=port["name"], latitude=lat, longitude=lon, state=port["state"])
 
     # ---- current safety picture -----------------------------------------
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=5) as pool:
         weather_fut = pool.submit(weather_agent.run, loc, now)
         ocean_fut = pool.submit(ocean_agent.run, loc, now)
         cyclone_fut = pool.submit(cyclone_agent.run, loc, now)
         gis_fut = pool.submit(gis_agent.run, loc, now)
+        pfz_fut = pool.submit(pfz_agent.run, loc, now, count=10, radius_km=radius_km)
         
         weather = weather_fut.result()
         ocean = ocean_fut.result()
         cyclone = cyclone_fut.result()
         gis = gis_fut.result()
+        pfz_res = pfz_fut.result()
 
     risk_res = risk_agent.run(loc, now, weather=weather.data, ocean=ocean.data,
                               cyclone=cyclone.data, gis=gis.data,
@@ -126,7 +131,7 @@ def fishing_outlook(
     ambient_sst = ocean.data.get("sst_c")
 
     # ---- grounds within the radius, today -------------------------------
-    candidates = demo_store.pfz_zones(lat, lon, loc.name, now, radius_km=radius_km)
+    candidates = pfz_res.data.get("zones", []) if pfz_res.ok else []
     zones = _zone_payload(loc, candidates, ambient_sst, now.hour)
 
     # ---- best hours to be on the water ----------------------------------

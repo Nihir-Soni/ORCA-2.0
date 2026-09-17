@@ -36,7 +36,7 @@ def _blocking_zone(lat: float, lon: float):
 
 
 @timed
-def run(location: Location, when: datetime, count: int = 6) -> AgentResult:
+def run(location: Location, when: datetime, count: int = 6, radius_km: float = 100.0) -> AgentResult:
     stamp = when.isoformat(timespec="seconds")
     raw: List[Dict[str, Any]] = []
     mode = "DEMO"
@@ -46,25 +46,28 @@ def run(location: Location, when: datetime, count: int = 6) -> AgentResult:
     if live_enabled():
         pfz_res = incois_provider.fetch_pfz_zones(location.latitude, location.longitude, when)
         if pfz_res:
-            raw = pfz_res.data.get("zones", [])
+            incois_zones = pfz_res.data.get("zones", [])
             mode = "LIVE"
             source = pfz_res.metadata.source
             stamp = pfz_res.metadata.valid_time
             # Calculate distance and bearing for INCOIS zones relative to boat
-            for z in raw:
+            for z in incois_zones:
                 pt1 = (location.latitude, location.longitude)
                 pt2 = (z["latitude"], z["longitude"])
-                z["distance_km"] = round(haversine_km(pt1, pt2), 2)
-                z["bearing"] = compass(bearing_deg(pt1, pt2))
-                z["source"] = source
+                dist = round(haversine_km(pt1, pt2), 2)
+                if dist <= radius_km:
+                    z["distance_km"] = dist
+                    z["bearing"] = compass(bearing_deg(pt1, pt2))
+                    z["source"] = source
+                    raw.append(z)
         else:
             unavailable.append("INCOIS PFZ advisory unavailable")
             mode = "UNAVAILABLE"
     if not live_enabled():
-        raw = demo_store.pfz_zones(location.latitude, location.longitude, location.name, when, count=count)
+        raw = demo_store.pfz_zones(location.latitude, location.longitude, location.name, when, count=count, radius_km=radius_km)
         for z in raw:
             pt1 = (location.latitude, location.longitude)
-            pt2 = (z["lat"], z["lon"])
+            pt2 = (z["latitude"], z["longitude"])
             z["distance_km"] = round(haversine_km(pt1, pt2), 2)
             z["bearing"] = compass(bearing_deg(pt1, pt2))
             z["source"] = "DEMO"
