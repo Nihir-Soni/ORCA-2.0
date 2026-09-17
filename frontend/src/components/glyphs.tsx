@@ -5,6 +5,7 @@
  */
 
 import type { CSSProperties } from "react";
+import logoUrl from "../assets/logo.png";
 type G = { size?: number; className?: string; style?: CSSProperties };
 
 /**
@@ -14,90 +15,16 @@ type G = { size?: number; className?: string; style?: CSSProperties };
  * Uses currentColor for the black body so it respects the theme colour.
  */
 export function OrcaLogo({ size = 44, className = "", style }: G) {
-  // keep aspect ratio 5:3
-  const w = size;
-  const h = Math.round(size * 0.6);
   return (
-    <svg
-      width={w}
-      height={h}
-      viewBox="0 0 100 60"
-      fill="none"
+    <img
+      src={logoUrl}
+      width={size}
+      height={size}
       className={className}
-      style={style}
+      style={{ objectFit: "contain", borderRadius: "50%", ...style }}
+      alt="ORCA Logo"
       aria-hidden
-    >
-      {/* ── Main body (black) ─────────────────────────────────────── */}
-      {/*
-          Snout tip is at (12, 36).
-          Head curves up to (8, 24).
-          Upper back runs to dorsal-fin base at (40, 14).
-          Dorsal fin peaks at (48, 1) then rejoins at (56, 14).
-          Back tapers to tail stock at (82, 26).
-          Upper tail fluke sweeps to (96, 14).
-          Central notch at (97, 26).
-          Lower tail fluke sweeps to (96, 38).
-          Belly curves back left to snout.
-      */}
-      <path
-        fill="currentColor"
-        d="
-          M 12 36
-          C 6 30 5 22 9 17
-          C 13 12 24 10 40 11
-          L 40 14
-          C 43 6 48 1 51 1
-          C 54 1 57 6 56 14
-          L 82 22
-          C 86 24 88 26 88 28
-          L 96 14
-          C 98 11 100 13 99 17
-          L 97 26
-          L 99 35
-          C 100 39 98 41 96 38
-          L 88 32
-          C 84 36 76 42 62 46
-          C 50 50 34 50 22 46
-          C 15 43 10 40 12 36 Z
-        "
-      />
-
-      {/* ── White belly ───────────────────────────────────────────── */}
-      <path
-        fill="white"
-        opacity="0.93"
-        d="
-          M 22 44
-          C 36 52 54 52 66 47
-          C 76 44 82 40 86 36
-          C 80 44 66 50 50 52
-          C 36 54 24 50 18 45
-          C 18 44 20 43 22 44 Z
-        "
-      />
-
-      {/* ── White eye patch (the orca's most iconic marking) ──────── */}
-      {/* Sits diagonally behind and above the eye, pointing backward */}
-      <ellipse
-        cx="21"
-        cy="22"
-        rx="7"
-        ry="4.5"
-        fill="white"
-        opacity="0.96"
-        transform="rotate(-25 21 22)"
-      />
-
-      {/* ── Eye (dark pupil over the white patch) ─────────────────── */}
-      <circle cx="18" cy="24" r="1.8" fill="currentColor" opacity="0.9" />
-
-      {/* ── Pectoral fin ──────────────────────────────────────────── */}
-      <path
-        fill="currentColor"
-        opacity="0.60"
-        d="M 28 44 C 22 52 16 58 19 62 C 24 57 32 50 34 44 Z"
-      />
-    </svg>
+    />
   );
 }
 
