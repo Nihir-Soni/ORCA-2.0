@@ -29,6 +29,9 @@ class CopernicusProvider(BaseProvider):
         self._sst_grid_cache_lock = threading.Lock()
         self._sst_grid: Optional[list] = None
         self._sst_grid_fetched_at: float = 0
+        self._chl_grid_cache_lock = threading.Lock()
+        self._chl_grid: Optional[list] = None
+        self._chl_grid_fetched_at: float = 0
         
         # We also cache the fetched_at timestamp globally to avoid fetching it on every request
         self._metadata_lock = threading.Lock()
@@ -198,15 +201,14 @@ class CopernicusProvider(BaseProvider):
             print(f"[ORCA][LIVE][COPERNICUS] Error reading chlorophyll data: {e}")
             return None
 
-    def fetch_sst_grid(self) -> Optional[list]:
-        """Fetch the entire SST grid for map visualization."""
+    def _fetch_grid_variable(self, var_name: str, cache_lock: threading.Lock, cached_grid: list, fetched_at: float) -> Tuple[Optional[list], float]:
         if self._is_stale():
-            return None
+            return None, fetched_at
             
         now = time.monotonic()
-        with self._sst_grid_cache_lock:
-            if self._sst_grid is not None and (now - self._sst_grid_fetched_at) < 900.0:
-                return self._sst_grid
+        with cache_lock:
+            if cached_grid is not None and (now - fetched_at) < 900.0:
+                return cached_grid, fetched_at
 
         try:
             headers = {"Authorization": f"Bearer {self.upstash_token}"}
@@ -216,7 +218,7 @@ class CopernicusProvider(BaseProvider):
             res = r.json()
             items = res.get("result")
             if not items:
-                return None
+                return None, fetched_at
                 
             grid = []
             for i in range(0, len(items), 2):
@@ -224,17 +226,33 @@ class CopernicusProvider(BaseProvider):
                 val_str = items[i+1]
                 lat_str, lon_str = key.split(",")
                 data = json.loads(val_str)
-                if "sst" in data:
-                    grid.append([float(lat_str), float(lon_str), float(data["sst"])])
+                if var_name in data:
+                    grid.append([float(lat_str), float(lon_str), float(data[var_name])])
                     
-            with self._sst_grid_cache_lock:
-                self._sst_grid = grid
-                self._sst_grid_fetched_at = time.monotonic()
-                
-            return grid
+            return grid, time.monotonic()
         except Exception as e:
-            print(f"[ORCA][LIVE][COPERNICUS] Failed to fetch full grid from Upstash: {e}")
-            return None
+            print(f"[ORCA][LIVE][COPERNICUS] Failed to fetch full grid for {var_name} from Upstash: {e}")
+            return None, fetched_at
+
+    def fetch_sst_grid(self) -> Optional[list]:
+        """Fetch the entire SST grid for map visualization."""
+        grid, fetched_at = self._fetch_grid_variable(
+            "sst", self._sst_grid_cache_lock, self._sst_grid, self._sst_grid_fetched_at
+        )
+        with self._sst_grid_cache_lock:
+            self._sst_grid = grid
+            self._sst_grid_fetched_at = fetched_at
+        return grid
+
+    def fetch_chlorophyll_grid(self) -> Optional[list]:
+        """Fetch the entire chlorophyll grid for map visualization."""
+        grid, fetched_at = self._fetch_grid_variable(
+            "chl", self._chl_grid_cache_lock, self._chl_grid, self._chl_grid_fetched_at
+        )
+        with self._chl_grid_cache_lock:
+            self._chl_grid = grid
+            self._chl_grid_fetched_at = fetched_at
+        return grid
 
     def _convert_uv_to_speed_direction(self, u: float, v: float) -> Tuple[float, float]:
         """Convert U/V current components to speed (m/s) and direction (deg)."""

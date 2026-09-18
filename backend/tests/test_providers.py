@@ -88,6 +88,32 @@ def test_copernicus_live_chlorophyll_cache_hit(mock_get, clean_copernicus_provid
     assert res.data["chlorophyll_mg_m3"] == 1.2345
 
 @patch('httpx.Client.get')
+def test_copernicus_sst_grid(mock_get, clean_copernicus_provider):
+    """LIVE SST grid fetch"""
+    fresh_time = datetime.now(timezone.utc).isoformat()
+    mock_get.side_effect = [
+        _mock_metadata_response(fresh_time),
+        _mock_httpx_response(["19.0,72.8", json.dumps({"sst": 30.5}), "19.1,72.8", json.dumps({"sst": 30.6, "chl": 1.2})])
+    ]
+    grid = clean_copernicus_provider.fetch_sst_grid()
+    assert grid is not None
+    assert len(grid) == 2
+    assert grid[0] == [19.0, 72.8, 30.5]
+
+@patch('httpx.Client.get')
+def test_copernicus_chlorophyll_grid(mock_get, clean_copernicus_provider):
+    """LIVE Chlorophyll grid fetch"""
+    fresh_time = datetime.now(timezone.utc).isoformat()
+    mock_get.side_effect = [
+        _mock_metadata_response(fresh_time),
+        _mock_httpx_response(["19.0,72.8", json.dumps({"sst": 30.5, "chl": 0.5}), "19.1,72.8", json.dumps({"sst": 30.6})])
+    ]
+    grid = clean_copernicus_provider.fetch_chlorophyll_grid()
+    assert grid is not None
+    assert len(grid) == 1
+    assert grid[0] == [19.0, 72.8, 0.5]
+
+@patch('httpx.Client.get')
 def test_copernicus_missing_redis_field(mock_get, clean_copernicus_provider):
     """3. Missing Redis field"""
     fresh_time = datetime.now(timezone.utc).isoformat()

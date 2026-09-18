@@ -69,3 +69,10 @@ def sst_grid() -> dict:
     if grid is None:
         return {"data": []}
     return {"data": grid}
+
+@router.get("/chlorophyll-grid")
+def chlorophyll_grid() -> dict:
+    grid = copernicus_provider.fetch_chlorophyll_grid()
+    if grid is None:
+        return {"data": []}
+    return {"data": grid}

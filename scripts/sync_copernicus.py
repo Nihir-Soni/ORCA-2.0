@@ -19,7 +19,7 @@ CHLOROPHYLL_PRODUCT = "cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1
 
 # Indian EEZ Limits
 LAT_MIN, LAT_MAX = 5.0, 25.0
-LON_MIN, LON_MAX = 65.0, 90.0
+LON_MIN, LON_MAX = 65.0, 95.0
 # We use 0.1 degree resolution
 LATS = np.arange(LAT_MIN, LAT_MAX + 0.1, 0.1)
 LONS = np.arange(LON_MIN, LON_MAX + 0.1, 0.1)

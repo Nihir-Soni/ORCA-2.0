@@ -133,6 +133,9 @@ export default function MarineMap({
   const [showSST, setShowSST] = useState(false);
   const [sstGrid, setSSTGrid] = useState<[number, number, number][] | null>(null);
   const sstLayerRef = useRef<L.LayerGroup | null>(null);
+  const [showChl, setShowChl] = useState(false);
+  const [chlGrid, setChlGrid] = useState<[number, number, number][] | null>(null);
+  const chlLayerRef = useRef<L.LayerGroup | null>(null);
   const mapHeight = height ?? (areas.length ? 540 : 420);
 
   // Leaflet caches the container size, so tell it whenever the height changes.
@@ -161,6 +164,13 @@ export default function MarineMap({
       api.fetchSSTGrid().then(res => setSSTGrid(res.data)).catch(console.error);
     }
   }, [showSST, sstGrid]);
+
+  // Fetch Chlorophyll Grid
+  useEffect(() => {
+    if (showChl && !chlGrid) {
+      api.fetchChlorophyllGrid().then(res => setChlGrid(res.data)).catch(console.error);
+    }
+  }, [showChl, chlGrid]);
 
   // SST Layer renderer
   useEffect(() => {
@@ -212,6 +222,81 @@ export default function MarineMap({
        }
     };
   }, [showSST, sstGrid]);
+
+  // Chlorophyll Layer renderer
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!showChl || !chlGrid) {
+      if (chlLayerRef.current) {
+        chlLayerRef.current.clearLayers();
+        map.removeLayer(chlLayerRef.current);
+        chlLayerRef.current = null;
+      }
+      return;
+    }
+
+    if (chlLayerRef.current) return;
+
+    const lg = L.layerGroup();
+    const renderer = L.canvas({ padding: 0.5 });
+    
+    // Log scale visualization for highly skewed chlorophyll data.
+    // Range roughly 0.03 to 30.0 mg/m³ mapped to log10 space [-1.5 to 1.5]
+    const getColor = (c: number) => {
+       if (c <= 0 || isNaN(c)) return 'transparent';
+       const logC = Math.log10(c);
+       const minLog = -1.5, maxLog = 1.5;
+       const pct = Math.max(0, Math.min(1, (logC - minLog) / (maxLog - minLog)));
+       
+       // Dark blue -> Light Blue -> Green -> Yellow -> Red
+       let r, g, b;
+       if (pct < 0.25) { // Dark Blue to Light Blue
+          r = 0;
+          g = Math.round(255 * (pct / 0.25));
+          b = Math.round(128 + 127 * (pct / 0.25));
+       } else if (pct < 0.5) { // Light Blue to Green
+          const p = (pct - 0.25) / 0.25;
+          r = 0;
+          g = 255;
+          b = Math.round(255 * (1 - p));
+       } else if (pct < 0.75) { // Green to Yellow
+          const p = (pct - 0.5) / 0.25;
+          r = Math.round(255 * p);
+          g = 255;
+          b = 0;
+       } else { // Yellow to Red
+          const p = (pct - 0.75) / 0.25;
+          r = 255;
+          g = Math.round(255 * (1 - p));
+          b = 0;
+       }
+       return `rgb(${r},${g},${b})`;
+    };
+
+    chlGrid.forEach(([lat, lon, c]) => {
+      const bounds: L.LatLngBoundsExpression = [[lat - 0.05, lon - 0.05], [lat + 0.05, lon + 0.05]];
+      L.rectangle(bounds, {
+          renderer,
+          stroke: false,
+          fillColor: getColor(c),
+          fillOpacity: 0.55,
+          interactive: false
+      }).addTo(lg);
+    });
+    
+    lg.addTo(map);
+    chlLayerRef.current = lg;
+
+    return () => {
+       if (chlLayerRef.current) {
+          chlLayerRef.current.clearLayers();
+          map.removeLayer(chlLayerRef.current);
+          chlLayerRef.current = null;
+       }
+    };
+  }, [showChl, chlGrid]);
 
   // ---- init once -------------------------------------------------------
   useEffect(() => {
@@ -738,27 +823,52 @@ export default function MarineMap({
           )}
         </div>
 
-        {/* SST Toggle */}
-        <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2">
-          <button
-            onClick={() => setShowSST(!showSST)}
-            className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold shadow-md transition-colors ${
-              showSST ? "bg-[var(--ocean)] text-white border-[var(--ocean-bright)]" : "bg-paper-50 text-[var(--text-mid)] border-[var(--border)]"
-            }`}
-            style={{ border: "1px solid" }}
-          >
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: showSST ? "#fff" : "transparent", border: "1px solid currentColor" }} />
-            SST Layer
-          </button>
-          {showSST && sstGrid && (
-            <div className="bg-paper-50 p-2.5 text-[10px] font-mono shadow-md rounded" style={{ color: "var(--text-mid)", border: "1px solid var(--border)" }}>
-               <div className="mb-1.5 font-bold">Sea Surface Temp °C</div>
-               <div className="flex h-2.5 w-32 rounded" style={{ background: "linear-gradient(to right, rgb(0,0,255), rgb(0,255,255), rgb(0,255,0), rgb(255,255,0), rgb(255,0,0))" }} />
-               <div className="flex justify-between mt-1" style={{ color: "var(--text-faint)" }}>
-                  <span>24°</span><span>28°</span><span>32°</span>
-               </div>
-            </div>
-          )}
+        {/* Map Layers Toggle & Legends */}
+        <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2 pointer-events-none">
+          <div className="flex gap-2 pointer-events-auto">
+            <button
+              onClick={() => setShowSST(!showSST)}
+              className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold shadow-md transition-colors ${
+                showSST ? "bg-[var(--ocean)] text-white border-[var(--ocean-bright)]" : "bg-paper-50 text-[var(--text-mid)] border-[var(--border)]"
+              }`}
+              style={{ border: "1px solid" }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: showSST ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+              SST Layer
+            </button>
+            <button
+              onClick={() => setShowChl(!showChl)}
+              className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold shadow-md transition-colors ${
+                showChl ? "bg-[#1D7A50] text-white border-[#249864]" : "bg-paper-50 text-[var(--text-mid)] border-[var(--border)]"
+              }`}
+              style={{ border: "1px solid" }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: showChl ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+              Chlorophyll
+            </button>
+          </div>
+          
+          <div className="flex flex-col gap-2 pointer-events-auto">
+            {showSST && sstGrid && (
+              <div className="bg-paper-50 p-2.5 text-[10px] font-mono shadow-md rounded" style={{ color: "var(--text-mid)", border: "1px solid var(--border)" }}>
+                 <div className="mb-1.5 font-bold">Sea Surface Temp °C</div>
+                 <div className="flex h-2.5 w-40 rounded" style={{ background: "linear-gradient(to right, rgb(0,0,255), rgb(0,255,255), rgb(0,255,0), rgb(255,255,0), rgb(255,0,0))" }} />
+                 <div className="flex justify-between mt-1" style={{ color: "var(--text-faint)" }}>
+                    <span>24°</span><span>28°</span><span>32°</span>
+                 </div>
+              </div>
+            )}
+            
+            {showChl && chlGrid && (
+              <div className="bg-paper-50 p-2.5 text-[10px] font-mono shadow-md rounded" style={{ color: "var(--text-mid)", border: "1px solid var(--border)" }}>
+                 <div className="mb-1.5 font-bold">Chlorophyll mg/m³ (log)</div>
+                 <div className="flex h-2.5 w-40 rounded" style={{ background: "linear-gradient(to right, rgb(0,0,128), rgb(0,255,255), rgb(0,255,0), rgb(255,255,0), rgb(255,0,0))" }} />
+                 <div className="flex justify-between mt-1" style={{ color: "var(--text-faint)" }}>
+                    <span>0.1</span><span>1</span><span>10</span>
+                 </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Drag hint */}
