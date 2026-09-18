@@ -27,6 +27,36 @@ const T: Record<Language, Record<string, string>> = {
   },
 };
 
+const translateAdvisory = (text: string | null | undefined, lang: Language): string | null | undefined => {
+  if (!text) return text;
+  if (lang === "en") return text;
+  
+  const dict: Record<Language, Record<string, string>> = {
+    en: {},
+    hi: {
+      "Fishermen advised not to venture into the sea": "मछुआरों को समुद्र में न जाने की सलाह दी जाती है",
+      "Severe Cyclonic Storm — Orange message for north Odisha coast": "गंभीर चक्रवाती तूफान — उत्तरी ओडिशा तट के लिए ऑरेंज संदेश",
+      "High Wave Alert — wave height 4.5-6.0 m": "ऊंची लहरों की चेतावनी — लहरों की ऊंचाई 4.5-6.0 मीटर",
+      "Fishermen warning — squally weather over the north Bay of Bengal": "मछुआरों को चेतावनी — उत्तरी बंगाल की खाड़ी के ऊपर तूफानी मौसम",
+      "EXTREME": "अत्यधिक",
+      "HIGH": "उच्च",
+      "MODERATE": "मध्यम",
+      "LOW": "कम",
+    },
+    kn: {
+      "Fishermen advised not to venture into the sea": "ಮೀನುಗಾರರು ಸಮುದ್ರಕ್ಕೆ ಇಳಿಯದಂತೆ ಸಲಹೆ ನೀಡಲಾಗಿದೆ",
+      "Severe Cyclonic Storm — Orange message for north Odisha coast": "ತೀವ್ರ ಚಂಡಮಾರುತ — ಉತ್ತರ ಒಡಿಶಾ ಕರಾವಳಿಗೆ ಆರೆಂಜ್ ಸಂದೇಶ",
+      "High Wave Alert — wave height 4.5-6.0 m": "ಎತ್ತರದ ಅಲೆಗಳ ಎಚ್ಚರಿಕೆ — ಅಲೆಗಳ ಎತ್ತರ 4.5-6.0 ಮೀಟರ್",
+      "Fishermen warning — squally weather over the north Bay of Bengal": "ಮೀನುಗಾರರಿಗೆ ಎಚ್ಚರಿಕೆ — ಉತ್ತರ ಬಂಗಾಳ ಕೊಲ್ಲಿಯಲ್ಲಿ ಬಿರುಗಾಳಿ ಸಹಿತ ಹವಾಮಾನ",
+      "EXTREME": "ಅತ್ಯಂತ ಅಪಾಯ",
+      "HIGH": "ಹೆಚ್ಚಿನ ಅಪಾಯ",
+      "MODERATE": "ಮಧ್ಯಮ ಅಪಾಯ",
+      "LOW": "ಕಡಿಮೆ ಅಪಾಯ",
+    }
+  };
+  return dict[lang]?.[text] || text;
+};
+
 function exportCsv(data: AuthorityDashboard) {
   const q = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const rows = [
@@ -182,7 +212,7 @@ export default function AuthorityPanel({ language = "en" }: { language?: Languag
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-bright)" }}>{r.name}</div>
                     <div style={{ fontFamily: "Spline Sans Mono Variable, Consolas, monospace", fontSize: 8, color: "var(--text-faint)", letterSpacing: "0.1em" }}>
-                      {r.state} · {r.risk_category}
+                      {r.state} · {translateAdvisory(r.risk_category, language)}
                     </div>
                   </div>
                   {r.official_warning && (
@@ -272,7 +302,7 @@ export default function AuthorityPanel({ language = "en" }: { language?: Languag
                           border: `1px solid ${color}60`,
                           color,
                         }}>
-                          {row.risk_category}
+                          {translateAdvisory(row.risk_category, language)}
                         </span>
                       </div>
                     </td>
@@ -283,7 +313,7 @@ export default function AuthorityPanel({ language = "en" }: { language?: Languag
                       {row.wind_speed_kmh ?? "—"} km/h
                     </td>
                     <td style={{ padding: "10px 16px 10px 12px", fontSize: 11, color: row.official_warning ? "var(--risk-ext)" : "var(--text-dim)", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {row.headline ?? "—"}
+                      {translateAdvisory(row.headline, language) ?? "—"}
                     </td>
                   </tr>
                 );
