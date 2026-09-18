@@ -251,26 +251,43 @@ def plan_routes(origin: Coord, dest: Coord, *, wave_m: Optional[float] = None,
     return options
 
 
+def _get_coastal_points(spacing_km: float = 10.0) -> List[Coord]:
+    """Generate points along the simplified landmass boundary."""
+    pts = []
+    for poly in LANDMASS:
+        for i in range(len(poly) - 1):
+            p1, p2 = poly[i], poly[i+1]
+            d = haversine_km(p1, p2)
+            steps = max(1, int(d / spacing_km))
+            for step in range(steps):
+                f = step / steps
+                pts.append((p1[0] + f * (p2[0] - p1[0]), p1[1] + f * (p2[1] - p1[1])))
+    return pts
+
+
+COASTAL_POINTS = _get_coastal_points(5.0)
+
+
 def plan_emergency_route(origin: Coord, *, wave_m: Optional[float] = None,
                          wind_kmh: Optional[float] = None,
                          risk_score: int = 40,
                          risk_category: str = "MODERATE") -> Optional[dict]:
-    """Find the safest reachable gazetteered shore destination.
+    """Find the safest reachable shore destination.
 
     Emergency routing is deliberately separate from ``plan_routes``: the
-    normal planner targets a PFZ, while this planner targets landing centres.
-    The simplified coastline is used as a hard land boundary for intermediate
-    A* nodes; only the final shore node may be on land.
+    normal planner targets a PFZ, while this planner targets the nearest valid
+    coastal landing point.
     """
-    nearest = min(PORTS, key=lambda port: haversine_km(origin, (port["lat"], port["lon"])))
-    if is_on_land(*origin) and haversine_km(origin, (nearest["lat"], nearest["lon"])) > 0.5:
+    from ..data.geo import nearest_port
+    
+    nearest_coast = min(COASTAL_POINTS, key=lambda c: haversine_km(origin, c))
+    if is_on_land(*origin) and haversine_km(origin, nearest_coast) > 0.5:
         return None
-    candidates = sorted(PORTS, key=lambda port: haversine_km(origin, (port["lat"], port["lon"])))[:5]
+    candidates = sorted(COASTAL_POINTS, key=lambda c: haversine_km(origin, c))[:15]
     speed = _speed_for(wave_m, wind_kmh)
     best: Optional[dict] = None
 
-    for port in candidates:
-        destination: Coord = (port["lat"], port["lon"])
+    for destination in candidates:
         if is_on_land(*origin) and haversine_km(origin, destination) < 0.5:
             points = [origin, destination]
         else:
@@ -289,14 +306,18 @@ def plan_emergency_route(origin: Coord, *, wave_m: Optional[float] = None,
             continue
         if any(
             segment_intersects_polygon(points[index], points[index + 1], polygon)
-            for index in range(max(0, len(points) - 2))
+            for index in range(len(points) - 1)
             for polygon in LANDMASS
         ):
             continue
         distance = _path_length(points)
         score = risk_score + len(conflicts) * 1000 + max(0.0, distance - haversine_km(origin, destination)) * 0.5
+        
+        near_port = nearest_port(destination[0], destination[1])
+        dest_name = f"Coast near {near_port['name']}"
+        
         candidate = {
-            "destination": {"latitude": destination[0], "longitude": destination[1], "name": port["name"]},
+            "destination": {"latitude": destination[0], "longitude": destination[1], "name": dest_name},
             "distance_km": round(distance, 1),
             "eta_minutes": int(round(distance / speed * 60)),
             "risk_score": min(100, int(round(score))),

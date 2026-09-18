@@ -145,9 +145,23 @@ export default function App() {
   const [place, setPlace] = useState<PickedLocation | null>(null);
   const [outlook, setOutlook] = useState<FishingOutlook | null>(null);
   const [emergencyRoute, setEmergencyRoute] = useState<EmergencyRoute | null>(null);
+  const [showEmergencyRoute, setShowEmergencyRoute] = useState(false);
   const [loadingOutlook, setLoadingOutlook] = useState(false);
   const [focusRank, setFocusRank] = useState<number | null>(null);
   const [sosOpen, setSosOpen] = useState(false);
+
+  const checkAndFetchEmergencyRoute = useCallback(async (lat: number, lon: number, forceDisplay: boolean = false) => {
+    try {
+      const route = await api.emergencyRoute(lat, lon);
+      setEmergencyRoute(route);
+      if (forceDisplay) setShowEmergencyRoute(true);
+      return route;
+    } catch {
+      const errRoute = { available: false, destination: null, distance_km: null, eta_minutes: null, risk_score: null, risk_category: null, waypoints: [], notes: "Emergency route service unavailable." } as unknown as EmergencyRoute;
+      setEmergencyRoute(errRoute);
+      return errRoute;
+    }
+  }, []);
 
   // Theme effect
   useEffect(() => {
@@ -206,15 +220,20 @@ export default function App() {
     return () => { alive = false; };
   }, [place?.latitude, place?.longitude, language]);
 
+  // Emergency route visibility based on hazard presence
   useEffect(() => {
-    if (!place) return;
-    let alive = true;
-    api
-      .emergencyRoute(place.latitude, place.longitude)
-      .then((route) => alive && setEmergencyRoute(route))
-      .catch(() => alive && setEmergencyRoute({ available: false, destination: null, distance_km: null, eta_minutes: null, risk_score: null, risk_category: null, waypoints: [], notes: "Emergency route service unavailable." }));
-    return () => { alive = false; };
-  }, [place?.latitude, place?.longitude]);
+    if (!outlook || !place) {
+      setShowEmergencyRoute(false);
+      setEmergencyRoute(null);
+      return;
+    }
+    const inHazard = outlook.safety.category === "EXTREME" || outlook.avoid.some(item => item.active_now);
+    if (inHazard) {
+      checkAndFetchEmergencyRoute(place.latitude, place.longitude, true);
+    } else {
+      setShowEmergencyRoute(false);
+    }
+  }, [outlook, place?.latitude, place?.longitude, checkAndFetchEmergencyRoute]);
 
   // Chat
   const send = async (text: string) => {
@@ -606,7 +625,7 @@ export default function App() {
               )}
 
               {/* Emergency route panel */}
-              {emergencyRoute && (
+              {(showEmergencyRoute && emergencyRoute) && (
                 <div className="m-panel overflow-hidden" style={{ borderColor: emergencyRoute.available ? "rgba(239,68,68,0.25)" : "var(--border)" }}>
                   <div className="m-hd" style={{ background: emergencyRoute.available ? "rgba(239,68,68,0.06)" : undefined }}>
                     <span className="m-label" style={{ color: emergencyRoute.available ? "#EF4444" : undefined }}>
@@ -684,7 +703,7 @@ export default function App() {
 
               <MarineMap
                 origin={homeOrigin}
-                emergencyRoute={emergencyRoute}
+                emergencyRoute={showEmergencyRoute ? emergencyRoute : null}
                 zones={zones}
                 pfz={EMPTY_PFZ}
                 areas={outlook?.areas ?? EMPTY_AREAS}
@@ -856,6 +875,12 @@ export default function App() {
           longitude={place.longitude}
           language={language}
           onClose={() => setSosOpen(false)}
+          onFetchEmergencyRoute={async () => {
+            if (place) {
+              return await checkAndFetchEmergencyRoute(place.latitude, place.longitude, true);
+            }
+            return null;
+          }}
         />
       )}
     </div>

@@ -100,6 +100,7 @@ export default function SosModal({
   longitude,
   language = "en",
   onClose,
+  onFetchEmergencyRoute,
 }: {
   outlook: FishingOutlook | null;
   emergencyRoute: EmergencyRoute | null;
@@ -107,10 +108,12 @@ export default function SosModal({
   longitude: number;
   language?: Language;
   onClose: () => void;
+  onFetchEmergencyRoute?: () => Promise<EmergencyRoute | null>;
 }) {
   const t = L[language] ?? L.en;
   const [message, setMessage] = useState("Engine failure. Unable to return to shore.");
   const [sending, setSending] = useState(false);
+  const [fetchingRoute, setFetchingRoute] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [pulse, setPulse] = useState(true);
 
@@ -132,13 +135,21 @@ export default function SosModal({
     if (!current || !outlook) return;
     setSending(true);
     setResult(null);
+    
+    let finalRoute = route;
+    if (!finalRoute && onFetchEmergencyRoute) {
+      setFetchingRoute(true);
+      finalRoute = await onFetchEmergencyRoute();
+      setFetchingRoute(false);
+    }
+
     try {
       const res = await api.sendSos({
         latitude,
         longitude,
         risk: { category: outlook.safety.category, score: outlook.safety.score },
         hazards,
-        route,
+        route: finalRoute,
         message,
         language,
       });
@@ -429,7 +440,7 @@ export default function SosModal({
               {t.route}
             </div>
 
-            {!current || !route ? (
+            {!current || (!route && fetchingRoute) ? (
               <div style={{
                 background: "var(--surface-2)",
                 border: "1px solid var(--border)",
@@ -441,7 +452,19 @@ export default function SosModal({
               }}>
                 {t.calcRoute}
               </div>
-            ) : route.available ? (
+            ) : (!route && !fetchingRoute) ? (
+              <div style={{
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                borderRadius: 2,
+                padding: "12px 14px",
+                fontSize: 12,
+                color: "var(--text-dim)",
+                fontStyle: "italic",
+              }}>
+                {language === "kn" ? "SOS ಕಳುಹಿಸಿದಾಗ ಮಾರ್ಗವನ್ನು ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತದೆ." : language === "hi" ? "SOS भेजने पर मार्ग की गणना की जाएगी।" : "Route will be calculated upon sending SOS."}
+              </div>
+            ) : route!.available ? (
               <div style={{
                 background: "rgba(239,68,68,0.05)",
                 border: "1px solid rgba(239,68,68,0.25)",
@@ -626,13 +649,13 @@ export default function SosModal({
             </button>
             <button
               onClick={submit}
-              disabled={sending || !current || emergencyRoute === null}
+              disabled={sending || fetchingRoute || !current}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
                 padding: "8px 22px",
-                background: sending ? "rgba(239,68,68,0.4)" : "rgba(239,68,68,0.15)",
+                background: (sending || fetchingRoute) ? "rgba(239,68,68,0.4)" : "rgba(239,68,68,0.15)",
                 color: "#EF4444",
                 border: "1px solid rgba(239,68,68,0.6)",
                 borderRadius: 2,
@@ -641,13 +664,13 @@ export default function SosModal({
                 fontWeight: 800,
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
-                cursor: sending || !current || emergencyRoute === null ? "not-allowed" : "pointer",
-                opacity: !current || emergencyRoute === null ? 0.4 : 1,
+                cursor: (sending || fetchingRoute) || !current ? "not-allowed" : "pointer",
+                opacity: !current ? 0.4 : 1,
                 transition: "all 0.2s",
-                animation: sending ? "inkblink 1s ease-in-out infinite" : "none",
+                animation: (sending || fetchingRoute) ? "inkblink 1s ease-in-out infinite" : "none",
               }}
               onMouseEnter={(e) => {
-                if (!sending && current && emergencyRoute !== null) {
+                if (!sending && !fetchingRoute && current) {
                   e.currentTarget.style.background = "rgba(239,68,68,0.3)";
                   e.currentTarget.style.boxShadow = "0 0 20px rgba(239,68,68,0.4)";
                 }
@@ -657,10 +680,10 @@ export default function SosModal({
                 e.currentTarget.style.boxShadow = "none";
               }}
             >
-              {sending ? (
+              {sending || fetchingRoute ? (
                 <>
                   <span style={{ display: "inline-block", animation: "sonar 1.2s linear infinite" }}>◎</span>
-                  {t.sending}
+                  {fetchingRoute ? (language === "kn" ? "ಲೆಕ್ಕಹಾಕಲಾಗುತ್ತಿದೆ…" : language === "hi" ? "गणना हो रही है…" : "CALCULATING…") : t.sending}
                 </>
               ) : (
                 <>
