@@ -39,54 +39,89 @@ def main():
         print("Error: COPERNICUS_USERNAME and COPERNICUS_PASSWORD environment variables must be set.")
         sys.exit(1)
 
-    print("Opening Copernicus datasets...")
+    print("Opening Copernicus datasets metadata...")
     try:
-        ds_curr = cm.open_dataset(
+        ds_curr_meta = cm.open_dataset(
             dataset_id=CURRENT_PRODUCT,
             username=copernicus_user,
             password=copernicus_pass
         )
-        ds_chl = cm.open_dataset(
+        ds_chl_meta = cm.open_dataset(
             dataset_id=CHLOROPHYLL_PRODUCT,
             username=copernicus_user,
             password=copernicus_pass
         )
     except Exception as e:
-        print(f"Failed to open Copernicus dataset: {e}")
+        print(f"Failed to open Copernicus dataset metadata: {e}")
         sys.exit(1)
         
-    if ds_curr is None or ds_chl is None:
-        print("Error: Copernicus SDK returned None instead of a dataset. Authentication or dataset access failed.")
-        sys.exit(1)
-
-    print("Subsetting to latest slice...")
+    print("Determining latest time slice...")
     try:
-        # Time -1, depth 0
-        curr_subset = ds_curr.isel(time=-1)
-        if 'depth' in curr_subset.dims:
-            curr_subset = curr_subset.isel(depth=0)
-            
-        chl_subset = ds_chl.isel(time=-1)
-    except Exception as e:
-        print(f"Failed to subset dataset: {e}")
-        sys.exit(1)
-
-    print("Extracting dataset valid_time...")
-    try:
-        if 'time' not in curr_subset.coords or 'time' not in chl_subset.coords:
-            print("Error: Dataset is missing the time coordinate.")
-            sys.exit(1)
-            
         import pandas as pd
-        curr_time_dt = pd.Timestamp(curr_subset.time.values).tz_localize("UTC").isoformat()
-        chl_time_dt = pd.Timestamp(chl_subset.time.values).tz_localize("UTC").isoformat()
         
-        if curr_time_dt == chl_time_dt:
-            valid_time_payload = curr_time_dt
+        latest_time_curr = pd.Timestamp(ds_curr_meta.time.values[-1]).tz_localize(None).to_pydatetime()
+        latest_time_chl = pd.Timestamp(ds_chl_meta.time.values[-1]).tz_localize(None).to_pydatetime()
+        
+        curr_time_str = pd.Timestamp(ds_curr_meta.time.values[-1]).tz_localize("UTC").isoformat()
+        chl_time_str = pd.Timestamp(ds_chl_meta.time.values[-1]).tz_localize("UTC").isoformat()
+        
+        if curr_time_str == chl_time_str:
+            valid_time_payload = curr_time_str
         else:
-            valid_time_payload = {"current": curr_time_dt, "chlorophyll": chl_time_dt}
+            valid_time_payload = {"current": curr_time_str, "chlorophyll": chl_time_str}
+            
     except Exception as e:
         print(f"Failed to extract dataset valid_time: {e}")
+        sys.exit(1)
+
+    print(f"Subsetting current/temperature data for {latest_time_curr}...")
+    try:
+        curr_subset_resp = cm.subset(
+            dataset_id=CURRENT_PRODUCT,
+            username=copernicus_user,
+            password=copernicus_pass,
+            variables=["uo", "vo", "thetao"],
+            minimum_latitude=LAT_MIN - 0.5,
+            maximum_latitude=LAT_MAX + 0.5,
+            minimum_longitude=LON_MIN - 0.5,
+            maximum_longitude=LON_MAX + 0.5,
+            minimum_depth=0,
+            maximum_depth=1,
+            start_datetime=latest_time_curr.strftime("%Y-%m-%d %H:%M:%S"),
+            end_datetime=latest_time_curr.strftime("%Y-%m-%d %H:%M:%S"),
+            output_filename="curr_subset.nc",
+            overwrite=True
+        )
+        curr_subset = xr.open_dataset(
+            curr_subset_resp.file_path if hasattr(curr_subset_resp, 'file_path') else curr_subset_resp,
+            engine="netcdf4"
+        )
+    except Exception as e:
+        print(f"Failed to subset current data: {e}")
+        sys.exit(1)
+
+    print(f"Subsetting chlorophyll data for {latest_time_chl}...")
+    try:
+        chl_subset_resp = cm.subset(
+            dataset_id=CHLOROPHYLL_PRODUCT,
+            username=copernicus_user,
+            password=copernicus_pass,
+            variables=["CHL"],
+            minimum_latitude=LAT_MIN - 0.5,
+            maximum_latitude=LAT_MAX + 0.5,
+            minimum_longitude=LON_MIN - 0.5,
+            maximum_longitude=LON_MAX + 0.5,
+            start_datetime=latest_time_chl.strftime("%Y-%m-%d %H:%M:%S"),
+            end_datetime=latest_time_chl.strftime("%Y-%m-%d %H:%M:%S"),
+            output_filename="chl_subset.nc",
+            overwrite=True
+        )
+        chl_subset = xr.open_dataset(
+            chl_subset_resp.file_path if hasattr(chl_subset_resp, 'file_path') else chl_subset_resp,
+            engine="netcdf4"
+        )
+    except Exception as e:
+        print(f"Failed to subset chlorophyll data: {e}")
         sys.exit(1)
 
     print("Interpolating to Indian EEZ 0.1-degree grid...")
@@ -99,16 +134,12 @@ def main():
         curr_grid = curr_subset.interp(latitude=lats_da, longitude=lons_da, method="nearest")
         chl_grid = chl_subset.interp(latitude=lats_da, longitude=lons_da, method="nearest")
         
+        curr_grid = curr_grid.squeeze().drop_vars(['time', 'depth'], errors='ignore')
+        chl_grid = chl_grid.squeeze().drop_vars(['time', 'depth'], errors='ignore')
+
         print("Extracting valid points...")
-        df_curr = curr_grid[["uo", "vo"]].to_dataframe().dropna()
+        df_curr = curr_grid[["uo", "vo", "thetao"]].to_dataframe().dropna()
         df_chl = chl_grid[["CHL"]].to_dataframe().dropna()
-        
-        # Drop redundant coordinate columns to prevent overlap during join
-        for col in ['time', 'depth']:
-            if col in df_curr.columns:
-                df_curr = df_curr.drop(columns=[col])
-            if col in df_chl.columns:
-                df_chl = df_chl.drop(columns=[col])
         
         # Join dataframes on latitude, longitude
         df = df_curr.join(df_chl, how='inner')
@@ -118,12 +149,14 @@ def main():
             lon = index[1]
             u = row['uo']
             v = row['vo']
+            thetao = row['thetao']
             chl = row['CHL']
             
             key = f"{lat:.1f},{lon:.1f}"
             data_map[key] = json.dumps({
                 "u": round(float(u), 3),
                 "v": round(float(v), 3),
+                "sst": round(float(thetao), 2),
                 "chl": round(float(chl), 4)
             })
             

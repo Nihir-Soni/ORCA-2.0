@@ -8,6 +8,7 @@ from fastapi import APIRouter, Query
 from ..agents import pfz_agent
 from ..data.demo_store import now_ist
 from ..data.geo import PORTS, RESTRICTED_ZONES, nearest_port
+from ..data.providers.copernicus import copernicus_provider
 from ..schemas import Location
 
 router = APIRouter(prefix="/api/map", tags=["map"])
@@ -61,3 +62,10 @@ def pfz(lat: float = Query(...), lon: float = Query(...),
             for z in zones
         ],
     }
+
+@router.get("/sst-grid")
+def sst_grid() -> dict:
+    grid = copernicus_provider.fetch_sst_grid()
+    if grid is None:
+        return {"data": []}
+    return {"data": grid}

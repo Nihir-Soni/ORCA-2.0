@@ -130,6 +130,9 @@ export default function MarineMap({
   const isBoatDragRef = useRef(false);
   const [probe, setProbe] = useState<PositionCheck | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [showSST, setShowSST] = useState(false);
+  const [sstGrid, setSSTGrid] = useState<[number, number, number][] | null>(null);
+  const sstLayerRef = useRef<L.LayerGroup | null>(null);
   const mapHeight = height ?? (areas.length ? 540 : 420);
 
   // Leaflet caches the container size, so tell it whenever the height changes.
@@ -151,6 +154,64 @@ export default function MarineMap({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // Fetch SST Grid
+  useEffect(() => {
+    if (showSST && !sstGrid) {
+      api.fetchSSTGrid().then(res => setSSTGrid(res.data)).catch(console.error);
+    }
+  }, [showSST, sstGrid]);
+
+  // SST Layer renderer
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!showSST || !sstGrid) {
+      if (sstLayerRef.current) {
+        sstLayerRef.current.clearLayers();
+        map.removeLayer(sstLayerRef.current);
+        sstLayerRef.current = null;
+      }
+      return;
+    }
+
+    if (sstLayerRef.current) return;
+
+    const lg = L.layerGroup();
+    const renderer = L.canvas({ padding: 0.5 });
+    
+    const getColor = (t: number) => {
+       const min = 24, max = 32;
+       const pct = Math.max(0, Math.min(1, (t - min) / (max - min)));
+       const r = Math.max(0, Math.min(255, Math.round(255 * (1.5 - Math.abs(1 - 4 * (pct - 0.5))))));
+       const g = Math.max(0, Math.min(255, Math.round(255 * (1.5 - Math.abs(1 - 4 * (pct - 0.25))))));
+       const b = Math.max(0, Math.min(255, Math.round(255 * (1.5 - Math.abs(1 - 4 * pct)))));
+       return `rgb(${r},${g},${b})`;
+    };
+
+    sstGrid.forEach(([lat, lon, t]) => {
+      const bounds: L.LatLngBoundsExpression = [[lat - 0.05, lon - 0.05], [lat + 0.05, lon + 0.05]];
+      L.rectangle(bounds, {
+          renderer,
+          stroke: false,
+          fillColor: getColor(t),
+          fillOpacity: 0.55,
+          interactive: false
+      }).addTo(lg);
+    });
+    
+    lg.addTo(map);
+    sstLayerRef.current = lg;
+
+    return () => {
+       if (sstLayerRef.current) {
+          sstLayerRef.current.clearLayers();
+          map.removeLayer(sstLayerRef.current);
+          sstLayerRef.current = null;
+       }
+    };
+  }, [showSST, sstGrid]);
 
   // ---- init once -------------------------------------------------------
   useEffect(() => {
@@ -673,6 +734,29 @@ export default function MarineMap({
                 <circle cx="28" cy="28" r="12" fill="#AF2318" />
               </svg>
               <span>{lg.storm}</span>
+            </div>
+          )}
+        </div>
+
+        {/* SST Toggle */}
+        <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2">
+          <button
+            onClick={() => setShowSST(!showSST)}
+            className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold shadow-md transition-colors ${
+              showSST ? "bg-[var(--ocean)] text-white border-[var(--ocean-bright)]" : "bg-paper-50 text-[var(--text-mid)] border-[var(--border)]"
+            }`}
+            style={{ border: "1px solid" }}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: showSST ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+            SST Layer
+          </button>
+          {showSST && sstGrid && (
+            <div className="bg-paper-50 p-2.5 text-[10px] font-mono shadow-md rounded" style={{ color: "var(--text-mid)", border: "1px solid var(--border)" }}>
+               <div className="mb-1.5 font-bold">Sea Surface Temp °C</div>
+               <div className="flex h-2.5 w-32 rounded" style={{ background: "linear-gradient(to right, rgb(0,0,255), rgb(0,255,255), rgb(0,255,0), rgb(255,255,0), rgb(255,0,0))" }} />
+               <div className="flex justify-between mt-1" style={{ color: "var(--text-faint)" }}>
+                  <span>24°</span><span>28°</span><span>32°</span>
+               </div>
             </div>
           )}
         </div>

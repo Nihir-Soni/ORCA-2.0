@@ -26,6 +26,9 @@ class CopernicusProvider(BaseProvider):
         self._value_cache_lock = threading.Lock()
         self._current_cache: Dict[Tuple[float, float], Tuple[float, Tuple[float, float]]] = {}
         self._chlorophyll_cache: Dict[Tuple[float, float], Tuple[float, float]] = {}
+        self._sst_grid_cache_lock = threading.Lock()
+        self._sst_grid: Optional[list] = None
+        self._sst_grid_fetched_at: float = 0
         
         # We also cache the fetched_at timestamp globally to avoid fetching it on every request
         self._metadata_lock = threading.Lock()
@@ -193,6 +196,44 @@ class CopernicusProvider(BaseProvider):
             )
         except Exception as e:
             print(f"[ORCA][LIVE][COPERNICUS] Error reading chlorophyll data: {e}")
+            return None
+
+    def fetch_sst_grid(self) -> Optional[list]:
+        """Fetch the entire SST grid for map visualization."""
+        if self._is_stale():
+            return None
+            
+        now = time.monotonic()
+        with self._sst_grid_cache_lock:
+            if self._sst_grid is not None and (now - self._sst_grid_fetched_at) < 900.0:
+                return self._sst_grid
+
+        try:
+            headers = {"Authorization": f"Bearer {self.upstash_token}"}
+            # HGETALL returns an array like [key1, val1, key2, val2, ...]
+            r = self._http().get(f"{self.upstash_url}/hgetall/copernicus_data", headers=headers)
+            r.raise_for_status()
+            res = r.json()
+            items = res.get("result")
+            if not items:
+                return None
+                
+            grid = []
+            for i in range(0, len(items), 2):
+                key = items[i]
+                val_str = items[i+1]
+                lat_str, lon_str = key.split(",")
+                data = json.loads(val_str)
+                if "sst" in data:
+                    grid.append([float(lat_str), float(lon_str), float(data["sst"])])
+                    
+            with self._sst_grid_cache_lock:
+                self._sst_grid = grid
+                self._sst_grid_fetched_at = time.monotonic()
+                
+            return grid
+        except Exception as e:
+            print(f"[ORCA][LIVE][COPERNICUS] Failed to fetch full grid from Upstash: {e}")
             return None
 
     def _convert_uv_to_speed_direction(self, u: float, v: float) -> Tuple[float, float]:

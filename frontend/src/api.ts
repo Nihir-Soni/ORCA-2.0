@@ -60,6 +60,10 @@ export function authority(): Promise<AuthorityDashboard> {
   return json(`${BASE}/authority/dashboard`);
 }
 
+export function fetchSSTGrid(): Promise<{ data: [number, number, number][] }> {
+  return json(`${BASE}/map/sst-grid`);
+}
+
 export function riskTimeline(lat: number, lon: number, hours = 24) {
   return json<{
     points: {
