@@ -305,7 +305,7 @@ export default function MarineMap({
     // recommended course animates its dashes — neither works on canvas.
     const map = L.map(containerRef.current, {
       zoomControl: false,
-      attributionControl: true,
+      attributionControl: false,
     }).setView([18.92, 72.6], 10);
 
     L.control.zoom({ position: "topleft" }).addTo(map);
@@ -317,7 +317,7 @@ export default function MarineMap({
     // warms OSM's palette to match the paper.
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      attribution: "&copy; OpenStreetMap contributors",
+      attribution: "",
     }).addTo(map);
 
     mapRef.current = map;
@@ -874,7 +874,7 @@ export default function MarineMap({
         {/* Drag hint */}
         {origin && !probe && !dragging && (
           <div
-            className="chart-key pointer-events-none absolute bottom-3 right-3 z-[500] shadow-md"
+            className="chart-key pointer-events-none absolute bottom-0 right-0 z-[500] shadow-md"
             style={{ padding: "4px 9px" }}
           >
             <span style={{
