@@ -1,7 +1,7 @@
 import threading
 import time
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 import httpx
@@ -158,5 +158,64 @@ class IMDProvider(BaseProvider):
 
     def fetch(self, lat: float, lon: float, when: datetime) -> Optional[ProviderResponse]:
         return self.fetch_alerts(lat, lon, when)
+
+    @staticmethod
+    def _cap_time(value: Optional[str]) -> Optional[datetime]:
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    def fetch_hazard_alerts(self) -> Optional[Dict]:
+        """Return active official cyclone CAP geometry for the map, unaltered."""
+        now = datetime.now(timezone.utc)
+        try:
+            response = self._client.get(self.RSS_FEED_URL)
+            response.raise_for_status()
+            root = ET.fromstring(response.text)
+            urls = [item.find("link").text for item in root.findall(".//item")
+                    if item.find("category") is not None and item.find("category").text == "Met"
+                    and item.find("link") is not None and item.find("link").text]
+            alerts = []
+            ns = {"cap": "urn:oasis:names:tc:emergency:cap:1.2"}
+            for url in urls[:10]:
+                cap = self._client.get(url)
+                if cap.status_code != 200:
+                    continue
+                doc = ET.fromstring(cap.text)
+                info = doc.find("cap:info", ns)
+                if info is None:
+                    continue
+                event = (info.findtext("cap:event", default="", namespaces=ns) or "").upper()
+                if not any(word in event for word in ("CYCLONE", "HURRICANE")):
+                    continue
+                effective = self._cap_time(info.findtext("cap:effective", namespaces=ns))
+                expires = self._cap_time(info.findtext("cap:expires", namespaces=ns))
+                if (effective and now < effective) or (expires and now > expires):
+                    continue
+                for area in info.findall("cap:area", ns):
+                    polygon = area.findtext("cap:polygon", namespaces=ns)
+                    circle = area.findtext("cap:circle", namespaces=ns)
+                    base = {"type": "CYCLONE", "source": "NDMA_SACHET_CAP", "event": event,
+                            "severity": info.findtext("cap:severity", namespaces=ns),
+                            "valid_from": effective.isoformat() if effective else None,
+                            "valid_until": expires.isoformat() if expires else None,
+                            "identifier": doc.findtext("cap:identifier", namespaces=ns)}
+                    if polygon:
+                        points = [[float(x.split(",")[0]), float(x.split(",")[1])] for x in polygon.split() if "," in x]
+                        if len(points) >= 3:
+                            alerts.append({**base, "geometry_type": "polygon", "polygon": points})
+                    if circle:
+                        values = circle.split()
+                        if len(values) == 2 and "," in values[0]:
+                            lat, lon = (float(x) for x in values[0].split(","))
+                            alerts.append({**base, "geometry_type": "circle", "latitude": lat,
+                                           "longitude": lon, "radius_km": float(values[1])})
+            return {"hazards": alerts, "fetched_at": datetime.utcnow().isoformat() + "Z"}
+        except Exception as e:
+            print(f"[ORCA][LIVE][IMD_HAZARDS] Failed to fetch NDMA CAP: {e}")
+            return None
 
 imd_provider = IMDProvider()

@@ -68,6 +68,18 @@ export function fetchChlorophyllGrid(): Promise<{ data: [number, number, number]
   return json(`${BASE}/map/chlorophyll-grid`);
 }
 
+export type WeatherHazard = {
+  type: "LIGHT_RAIN" | "HEAVY_RAIN" | "THUNDERSTORM" | "CYCLONE";
+  geometry_type: "grid_cell" | "circle" | "polygon";
+  latitude?: number; longitude?: number; radius_km?: number;
+  bounds?: [[number, number], [number, number]];
+  polygon?: [number, number][];
+  source: string; valid_time?: string; valid_until?: string;
+};
+export function fetchWeatherHazards(): Promise<{ status: "LIVE" | "UNAVAILABLE"; hazards: WeatherHazard[]; fetched_at?: string; reason?: string }> {
+  return json(`${BASE}/map/weather-hazards`);
+}
+
 export function riskTimeline(lat: number, lon: number, hours = 24) {
   return json<{
     points: {

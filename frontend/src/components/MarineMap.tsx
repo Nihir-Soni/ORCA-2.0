@@ -136,6 +136,10 @@ export default function MarineMap({
   const [showChl, setShowChl] = useState(false);
   const [chlGrid, setChlGrid] = useState<[number, number, number][] | null>(null);
   const chlLayerRef = useRef<L.LayerGroup | null>(null);
+  const [showWeatherHazards, setShowWeatherHazards] = useState(false);
+  const [weatherHazards, setWeatherHazards] = useState<api.WeatherHazard[] | null>(null);
+  const [weatherUnavailable, setWeatherUnavailable] = useState(false);
+  const weatherLayerRef = useRef<L.LayerGroup | null>(null);
   const mapHeight = height ?? (areas.length ? 540 : 420);
 
   // Leaflet caches the container size, so tell it whenever the height changes.
@@ -171,6 +175,35 @@ export default function MarineMap({
       api.fetchChlorophyllGrid().then(res => setChlGrid(res.data)).catch(console.error);
     }
   }, [showChl, chlGrid]);
+
+  useEffect(() => {
+    if (!showWeatherHazards || weatherHazards) return;
+    api.fetchWeatherHazards().then((res) => {
+      setWeatherHazards(res.hazards);
+      setWeatherUnavailable(res.status !== "LIVE");
+    }).catch(() => setWeatherUnavailable(true));
+  }, [showWeatherHazards, weatherHazards]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!showWeatherHazards || !weatherHazards) {
+      if (weatherLayerRef.current) { weatherLayerRef.current.clearLayers(); map.removeLayer(weatherLayerRef.current); weatherLayerRef.current = null; }
+      return;
+    }
+    if (weatherLayerRef.current) return;
+    const colors: Record<api.WeatherHazard["type"], string> = { LIGHT_RAIN: "#54bdf7", HEAVY_RAIN: "#0754a5", THUNDERSTORM: "#7c3aed", CYCLONE: "#dc2626" };
+    const layer = L.layerGroup(); const renderer = L.canvas({ padding: 0.5 });
+    weatherHazards.forEach((hazard) => {
+      const style = { color: colors[hazard.type], weight: 1.5, fillColor: colors[hazard.type], fillOpacity: 0.28, renderer };
+      const popup = `<b>${hazard.type.replace("_", " ")}</b><br/>LIVE · ${hazard.source}${hazard.valid_until ? `<br/>Valid until ${hazard.valid_until}` : hazard.valid_time ? `<br/>Valid ${hazard.valid_time}` : ""}`;
+      if (hazard.geometry_type === "grid_cell" && hazard.bounds) L.rectangle(hazard.bounds, style).bindPopup(popup).addTo(layer);
+      else if (hazard.geometry_type === "circle" && hazard.latitude != null && hazard.longitude != null && hazard.radius_km != null) L.circle([hazard.latitude, hazard.longitude], { ...style, radius: hazard.radius_km * 1000 }).bindPopup(popup).addTo(layer);
+      else if (hazard.geometry_type === "polygon" && hazard.polygon) L.polygon(hazard.polygon, style).bindPopup(popup).addTo(layer);
+    });
+    layer.addTo(map); weatherLayerRef.current = layer;
+    return () => { if (weatherLayerRef.current) { weatherLayerRef.current.clearLayers(); map.removeLayer(weatherLayerRef.current); weatherLayerRef.current = null; } };
+  }, [showWeatherHazards, weatherHazards]);
 
   // SST Layer renderer
   useEffect(() => {
@@ -846,6 +879,16 @@ export default function MarineMap({
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: showChl ? "#fff" : "transparent", border: "1px solid currentColor" }} />
               Chlorophyll
             </button>
+            <button
+              onClick={() => setShowWeatherHazards(!showWeatherHazards)}
+              className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold shadow-md transition-colors ${
+                showWeatherHazards ? "bg-[#5b21b6] text-white border-[#7c3aed]" : "bg-paper-50 text-[var(--text-mid)] border-[var(--border)]"
+              }`}
+              style={{ border: "1px solid" }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: showWeatherHazards ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+              Weather Hazards
+            </button>
           </div>
           
           <div className="flex flex-col gap-2 pointer-events-auto">
@@ -866,6 +909,19 @@ export default function MarineMap({
                  <div className="flex justify-between mt-1" style={{ color: "var(--text-faint)" }}>
                     <span>0.1</span><span>1</span><span>10</span>
                  </div>
+              </div>
+            )}
+            {showWeatherHazards && (
+              <div className="bg-paper-50 p-2.5 text-[10px] font-mono shadow-md rounded" style={{ color: "var(--text-mid)", border: "1px solid var(--border)" }}>
+                <div className="mb-1.5 font-bold">LIVE WEATHER HAZARDS</div>
+                {weatherUnavailable ? <div>Live weather hazards unavailable</div> : (
+                  ([
+                    ["LIGHT_RAIN", "#54bdf7", "Light Rain"], ["HEAVY_RAIN", "#0754a5", "Heavy Rain"],
+                    ["THUNDERSTORM", "#7c3aed", "Thunderstorm"], ["CYCLONE", "#dc2626", "Cyclone / Hurricane"],
+                  ] as const).filter(([type]) => weatherHazards?.some((h) => h.type === type)).map(([, color, label]) => (
+                    <div className="flex items-center gap-1.5" key={label}><span style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />{label}</div>
+                  ))
+                )}
               </div>
             )}
           </div>

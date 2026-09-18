@@ -38,6 +38,9 @@ def set_data_mode(mode: str) -> str:
 
 # Seconds before a live API call is abandoned in favour of cache/demo data.
 LIVE_TIMEOUT_SECONDS = float(os.getenv("ORCA_LIVE_TIMEOUT", "4.0"))
+# The multi-location weather-hazard grid is one bounded upstream request.  It
+# receives a small independent allowance without changing point forecasts.
+WEATHER_HAZARD_GRID_TIMEOUT_SECONDS = float(os.getenv("ORCA_WEATHER_HAZARD_GRID_TIMEOUT", "8.0"))
 
 # Optional AI intent layer. The key is read only by the backend and is never
 # included in a response or sent by the frontend.

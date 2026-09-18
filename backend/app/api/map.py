@@ -9,6 +9,9 @@ from ..agents import pfz_agent
 from ..data.demo_store import now_ist
 from ..data.geo import PORTS, RESTRICTED_ZONES, nearest_port
 from ..data.providers.copernicus import copernicus_provider
+from ..data.providers.open_meteo import open_meteo_provider
+from ..data.providers.imd import imd_provider
+from ..config import get_data_mode
 from ..schemas import Location
 
 router = APIRouter(prefix="/api/map", tags=["map"])
@@ -76,3 +79,37 @@ def chlorophyll_grid() -> dict:
     if grid is None:
         return {"data": []}
     return {"data": grid}
+
+
+def _intersects_coverage(hazard: dict) -> bool:
+    """Retain only geometry that intersects 5–25N / 65–95E."""
+    if hazard.get("geometry_type") == "grid_cell":
+        (south, west), (north, east) = hazard["bounds"]
+        return north >= 5 and south <= 25 and east >= 65 and west <= 95
+    if hazard.get("geometry_type") == "polygon":
+        lats, lons = zip(*hazard["polygon"])
+        return max(lats) >= 5 and min(lats) <= 25 and max(lons) >= 65 and min(lons) <= 95
+    if hazard.get("geometry_type") == "circle":
+        # Conservative latitude extent; CAP's original radius is preserved for
+        # rendering, never replaced with this filtering calculation.
+        radius_degrees = float(hazard.get("radius_km", 0)) / 111.0
+        return (hazard.get("latitude", -999) + radius_degrees >= 5 and
+                hazard.get("latitude", -999) - radius_degrees <= 25 and
+                hazard.get("longitude", -999) + radius_degrees >= 65 and
+                hazard.get("longitude", -999) - radius_degrees <= 95)
+    return 5 <= hazard.get("latitude", -999) <= 25 and 65 <= hazard.get("longitude", -999) <= 95
+
+
+@router.get("/weather-hazards")
+def weather_hazards() -> dict:
+    """Live Open-Meteo cells plus active NDMA cyclone CAP geometries only."""
+    if get_data_mode() != "LIVE":
+        return {"status": "UNAVAILABLE", "hazards": [], "reason": "Live weather hazards require LIVE mode"}
+    weather = open_meteo_provider.fetch_hazard_grid()
+    cap = imd_provider.fetch_hazard_alerts()
+    if weather is None and cap is None:
+        return {"status": "UNAVAILABLE", "hazards": [], "reason": "Live weather hazard sources unavailable"}
+    hazards = [h for source in (weather, cap) if source for h in source.get("hazards", []) if _intersects_coverage(h)]
+    fetched = [source.get("fetched_at") for source in (weather, cap) if source and source.get("fetched_at")]
+    return {"status": "LIVE", "hazards": hazards, "fetched_at": max(fetched) if fetched else None,
+            "coverage": {"south": 5, "north": 25, "west": 65, "east": 95}}
