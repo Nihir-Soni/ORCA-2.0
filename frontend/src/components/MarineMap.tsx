@@ -137,6 +137,7 @@ export default function MarineMap({
   const [chlGrid, setChlGrid] = useState<[number, number, number][] | null>(null);
   const chlLayerRef = useRef<L.LayerGroup | null>(null);
   const [showWeatherHazards, setShowWeatherHazards] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(true);
   const [weatherHazards, setWeatherHazards] = useState<api.WeatherHazard[] | null>(null);
   const [weatherUnavailable, setWeatherUnavailable] = useState(false);
   const weatherLayerRef = useRef<L.LayerGroup | null>(null);
@@ -858,37 +859,51 @@ export default function MarineMap({
 
         {/* Map Layers Toggle & Legends */}
         <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2 pointer-events-none">
-          <div className="flex gap-2 pointer-events-auto">
+          <div className="pointer-events-auto bg-paper-50 rounded shadow-md" style={{ border: "1px solid var(--border)", overflow: "hidden" }}>
             <button
-              onClick={() => setShowSST(!showSST)}
-              className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold shadow-md transition-colors ${
-                showSST ? "bg-[var(--ocean)] text-white border-[var(--ocean-bright)]" : "bg-paper-50 text-[var(--text-mid)] border-[var(--border)]"
-              }`}
-              style={{ border: "1px solid" }}
+              onClick={() => setLayersOpen(!layersOpen)}
+              className="w-full flex items-center justify-between gap-4 px-3 py-2 text-[11px] font-bold text-[var(--text-bright)] hover:bg-[var(--surface-2)] transition-colors"
+              style={{ borderBottom: layersOpen ? "1px solid var(--border)" : "none" }}
             >
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: showSST ? "#fff" : "transparent", border: "1px solid currentColor" }} />
-              SST Layer
+              Toggle Layers
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ transform: layersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
-            <button
-              onClick={() => setShowChl(!showChl)}
-              className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold shadow-md transition-colors ${
-                showChl ? "bg-[#1D7A50] text-white border-[#249864]" : "bg-paper-50 text-[var(--text-mid)] border-[var(--border)]"
-              }`}
-              style={{ border: "1px solid" }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: showChl ? "#fff" : "transparent", border: "1px solid currentColor" }} />
-              Chlorophyll
-            </button>
-            <button
-              onClick={() => setShowWeatherHazards(!showWeatherHazards)}
-              className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold shadow-md transition-colors ${
-                showWeatherHazards ? "bg-[#5b21b6] text-white border-[#7c3aed]" : "bg-paper-50 text-[var(--text-mid)] border-[var(--border)]"
-              }`}
-              style={{ border: "1px solid" }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: showWeatherHazards ? "#fff" : "transparent", border: "1px solid currentColor" }} />
-              Weather Hazards
-            </button>
+            {layersOpen && (
+              <div className="flex flex-col gap-1.5 p-2 bg-paper-50">
+                <button
+                  onClick={() => setShowSST(!showSST)}
+                  className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                    showSST ? "bg-[var(--ocean)] text-white border-[var(--ocean-bright)]" : "bg-[var(--surface-2)] text-[var(--text-mid)] border-[var(--border)]"
+                  }`}
+                  style={{ border: "1px solid" }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: showSST ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+                  SST Layer
+                </button>
+                <button
+                  onClick={() => setShowChl(!showChl)}
+                  className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                    showChl ? "bg-[#1D7A50] text-white border-[#249864]" : "bg-[var(--surface-2)] text-[var(--text-mid)] border-[var(--border)]"
+                  }`}
+                  style={{ border: "1px solid" }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: showChl ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+                  Chlorophyll
+                </button>
+                <button
+                  onClick={() => setShowWeatherHazards(!showWeatherHazards)}
+                  className={`flex items-center gap-2 rounded px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                    showWeatherHazards ? "bg-[#5b21b6] text-white border-[#7c3aed]" : "bg-[var(--surface-2)] text-[var(--text-mid)] border-[var(--border)]"
+                  }`}
+                  style={{ border: "1px solid" }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: showWeatherHazards ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+                  Weather Hazards
+                </button>
+              </div>
+            )}
           </div>
           
           <div className="flex flex-col gap-2 pointer-events-auto">
