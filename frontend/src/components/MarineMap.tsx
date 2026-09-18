@@ -879,7 +879,11 @@ export default function MarineMap({
                   }`}
                   style={{ border: "1px solid" }}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: showSST ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+                  {showSST && !sstGrid ? (
+                    <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 2a10 10 0 1 0 10 10" /></svg>
+                  ) : (
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: showSST ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+                  )}
                   SST Layer
                 </button>
                 <button
@@ -889,7 +893,11 @@ export default function MarineMap({
                   }`}
                   style={{ border: "1px solid" }}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: showChl ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+                  {showChl && !chlGrid ? (
+                    <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 2a10 10 0 1 0 10 10" /></svg>
+                  ) : (
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: showChl ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+                  )}
                   Chlorophyll
                 </button>
                 <button
@@ -899,7 +907,11 @@ export default function MarineMap({
                   }`}
                   style={{ border: "1px solid" }}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: showWeatherHazards ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+                  {showWeatherHazards && !weatherHazards && !weatherUnavailable ? (
+                    <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 2a10 10 0 1 0 10 10" /></svg>
+                  ) : (
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: showWeatherHazards ? "#fff" : "transparent", border: "1px solid currentColor" }} />
+                  )}
                   Weather Hazards
                 </button>
               </div>
