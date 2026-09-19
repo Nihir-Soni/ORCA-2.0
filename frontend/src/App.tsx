@@ -5,6 +5,7 @@ import AuthorityPanel from "./components/AuthorityPanel";
 import ChatPanel from "./components/ChatPanel";
 import ConditionsStrip from "./components/ConditionsStrip";
 import FishingPanel from "./components/FishingPanel";
+import HistoricalPanel from "./components/HistoricalPanel";
 import {
   ChartDefs,
   OrcaLogo,
@@ -42,7 +43,7 @@ const EMPTY_ROUTES: any[] = [];
 const EMPTY_GEOFENCE: any[] = [];
 const EMPTY_ALERTS: any[] = [];
 
-type AppTab = "home" | "ask" | "authority" | "system";
+type AppTab = "home" | "ask" | "historical" | "authority" | "system";
 type Tab = AppTab | "landing";
 
 const SCENARIOS: {
@@ -60,14 +61,15 @@ const SCENARIOS: {
 ];
 
 const TAB_LABEL: Record<Language, Record<AppTab, string>> = {
-  en: { home: "Today", ask: "Ask ORCA", authority: "Authority", system: "System" },
-  hi: { home: "आज", ask: "ORCA से पूछें", authority: "प्रशासन", system: "प्रणाली" },
-  kn: { home: "ಇಂದು", ask: "ORCA ಅನ್ನು ಕೇಳಿ", authority: "ಪ್ರಾಧಿಕಾರ", system: "ವ್ಯವಸ್ಥೆ" },
+  en: { home: "Today", ask: "Ask ORCA", historical: "Historical", authority: "Authority", system: "System" },
+  hi: { home: "आज", ask: "ORCA से पूछें", historical: "ऐतिहासिक", authority: "प्रशासन", system: "प्रणाली" },
+  kn: { home: "ಇಂದು", ask: "ORCA ಅನ್ನು ಕೇಳಿ", historical: "ಐತಿಹಾಸಿಕ", authority: "ಪ್ರಾಧಿಕಾರ", system: "ವ್ಯವಸ್ಥೆ" },
 };
 
 const TAB_ICON: Record<AppTab, string> = {
   home: "⊕",
   ask: "◎",
+  historical: "◑",
   authority: "◈",
   system: "◧",
 };
@@ -192,7 +194,7 @@ export default function App() {
     }
 
     const tabParam = params.get("tab");
-    if (tabParam === "home" || tabParam === "ask" || tabParam === "authority" || tabParam === "system")
+    if (tabParam === "home" || tabParam === "ask" || tabParam === "historical" || tabParam === "authority" || tabParam === "system")
       setTab(tabParam);
     const langParam = params.get("lang");
     if (langParam === "en" || langParam === "hi" || langParam === "kn") setLangChoice(langParam);
@@ -497,7 +499,7 @@ export default function App() {
 
         {/* Nav tabs */}
         <nav className="flex items-end gap-5 px-5" style={{ borderTop: "1px solid var(--border)" }}>
-          {(["home", "ask", "authority", "system"] as AppTab[]).map((x) => (
+          {(["home", "ask", "historical", "authority", "system"] as AppTab[]).map((x) => (
             <button key={x} onClick={() => setTab(x)} className={`tab mt-1 flex items-center gap-2 ${tab === x ? "tab-on" : ""}`}>
               <span style={{ fontSize: 10, opacity: 0.6 }}>{TAB_ICON[x]}</span>
               {tabLabels[x]}
@@ -864,6 +866,18 @@ export default function App() {
 
         {tab === "authority" && <AuthorityPanel language={language} />}
         {tab === "system" && <SystemPanel mode={mode} language={language} />}
+        {tab === "historical" && (
+          <HistoricalPanel
+            place={place}
+            language={language}
+            onPlacePick={setPlace}
+            onAskOrca={(query) => {
+              setTab("ask");
+              // Small delay so the chat panel mounts before we fire the query
+              setTimeout(() => send(query), 100);
+            }}
+          />
+        )}
       </main>
 
       {/* SOS Modal */}

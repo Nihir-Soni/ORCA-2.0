@@ -88,7 +88,7 @@ def extract_intent(message: str) -> Dict[str, Any]:
         "Classify this marine question for ORCA. Return JSON only with these keys: "
         "intent, activity, location_text, date, time, language, needs. "
         "intent must be one of fishing_safety, find_pfz, fishing_outlook, route, "
-        "emergency, weather, marine_conditions, alerts, restricted, general_query. "
+        "emergency, weather, marine_conditions, alerts, restricted, general_query, historical_analysis. "
         "activity must be fishing or travel. language must be en, hi, or kn. "
         "needs must be a JSON array of specialist names. Do not invent coordinates "
         "or locations; use an empty location_text when none is stated. "
@@ -124,6 +124,23 @@ def generate_explanation(context_data: Dict[str, Any], language: str) -> str:
         "However, you MAY use your own general knowledge to answer questions about local fish species, geography, or fishing techniques. "
         "For every real-time measurement or safety warning, you MUST cite the data source in brackets "
         "at the end of the sentence, for example: 'The wave height is 2.5m [Source: INCOIS]'.\n\n"
+    )
+    
+    if context_data.get("historical"):
+        prompt += (
+            "HISTORICAL DATA RULES:\n"
+            "- Use only supplied historical evidence.\n"
+            "- Do not invent values.\n"
+            "- Do not invent dates.\n"
+            "- Do not invent provider results.\n"
+            "- Do not perform unsupported numerical calculations.\n"
+            "- Do not claim causation from correlation.\n"
+            "- Clearly identify unavailable variables.\n"
+            "- Use exact provider provenance when discussing sources.\n"
+            "- Distinguish observation from interpretation.\n\n"
+        )
+    
+    prompt += (
         "IMPORTANT RULES FOR YOUR OUTPUT:\n"
         "1. Write in plain text only. Do NOT use any Markdown formatting (no asterisks **, no bullet points -, no tables).\n"
         "2. Keep it conversational, short, and easy to read aloud.\n"

@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
-from .api import alerts, chat, emergency_route, fishing, forecast, map as map_api, routes, sos
+from .api import alerts, chat, emergency_route, fishing, forecast, historical, map as map_api, routes, sos
 from .config import get_data_mode
 
 app = FastAPI(
@@ -46,6 +46,7 @@ app.include_router(alerts.router)
 app.include_router(routes.router)
 app.include_router(sos.router)
 app.include_router(emergency_route.router)
+app.include_router(historical.router)
 
 
 @app.get("/api/health")

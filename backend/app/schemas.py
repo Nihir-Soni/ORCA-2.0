@@ -12,7 +12,8 @@ from pydantic import BaseModel, Field
 
 Language = Literal["en", "hi", "kn"]
 IntentMode = Literal["OFFLINE", "AI"]
-DataMode = Literal["LIVE", "DEMO", "CACHE", "UNAVAILABLE", "PARTIAL_LIVE", "STATIC"]
+DataMode = Literal["LIVE", "DEMO", "CACHE", "UNAVAILABLE", "PARTIAL_LIVE", "STATIC", "HISTORICAL"]
+IntentCategory = Literal["fishing_safety", "find_pfz", "fishing_outlook", "route", "emergency", "weather", "marine_conditions", "alerts", "restricted", "general_query", "historical_analysis"]
 RiskCategory = Literal["LOW", "MODERATE", "HIGH", "EXTREME"]
 
 
@@ -52,6 +53,8 @@ class Intent(BaseModel):
     location: Optional[Location] = None
     location_text: str = ""
     date: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     time: Optional[str] = None
     language: Language = "en"
     raw_query: str = ""
@@ -67,6 +70,7 @@ class AgentResult(BaseModel):
     ok: bool = True
     location: Optional[Location] = None
     data: Dict[str, Any] = Field(default_factory=dict)
+    historical_data: Dict[str, Any] = Field(default_factory=dict)
     measurements: Dict[str, Measurement] = Field(default_factory=dict)
     risk: Optional[float] = None          # 0..1 sub-risk for the risk engine
     unavailable: List[str] = Field(default_factory=list)
@@ -217,6 +221,7 @@ class ChatResponse(BaseModel):
     geofence: List[GeofenceAlert] = Field(default_factory=list)
     alerts: List[Dict[str, Any]] = Field(default_factory=list)
     evidence: List[Evidence] = Field(default_factory=list)
+    historical: Optional[Dict[str, Any]] = None
     trace: List[AgentTrace] = Field(default_factory=list)
     suggestions: List[str] = Field(default_factory=list)
     mode: DataMode = "DEMO"

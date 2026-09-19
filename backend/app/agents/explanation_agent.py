@@ -133,7 +133,7 @@ def _pfz_summary(pfz: List[PFZZone], lang: Language) -> str:
 def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
         routes: List[RouteOption], geofence: List, weather: Dict, ocean: Dict,
         cyclone: Dict, gis: Dict, agents: Dict[str, AgentResult],
-        mode: str, when: datetime, chat_mode: str = "OFFLINE") -> AgentResult:
+        mode: str, when: datetime, chat_mode: str = "OFFLINE", historical: Optional[Dict[str, Any]] = None) -> AgentResult:
     lang: Language = intent.language
     parts: List[str] = []
 
@@ -202,6 +202,7 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
             "ocean": ocean,
             "cyclone": cyclone,
             "gis": gis,
+            "historical": historical,
             "sources": srcs
         }
         ai_answer = groq_intent.generate_explanation(context_data, lang)

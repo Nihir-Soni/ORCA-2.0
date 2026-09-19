@@ -3,6 +3,8 @@ import type {
   ChatResponse,
   EmergencyRoute,
   FishingOutlook,
+  HistoricalDays,
+  HistoricalResponse,
   Language,
   IntentMode,
   PositionCheck,
@@ -192,4 +194,18 @@ export function config() {
     deterministic_overrides: Record<string, number>;
     note: string;
   }>(`${BASE}/config`);
+}
+
+/** Historical marine analysis — full daily timeseries for the dashboard. */
+export function getHistoricalAnalysis(
+  lat: number,
+  lon: number,
+  days: HistoricalDays,
+): Promise<HistoricalResponse> {
+  const p = new URLSearchParams({
+    lat: String(lat),
+    lon: String(lon),
+    days: String(days),
+  });
+  return json<HistoricalResponse>(`${BASE}/historical?${p}`);
 }

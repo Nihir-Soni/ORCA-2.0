@@ -26,6 +26,9 @@ const T: Record<Language, Record<string, string>> = {
     fuel: "Fuel", catch: "Catch", revenue: "Revenue", profit: "Profit",
     econNote: "Planning estimate — not a guarantee.", barsCaption: "Factors: chlorophyll · SST · front · sea · time",
     pfzTitle: "PFZ INTELLIGENCE", pfzSub: "Potential Fishing Zones",
+    noNearby: "No INCOIS PFZ advisory within",
+    nearestIs: "Nearest INCOIS PFZ advisory is approximately",
+    kmAway: "km away."
   },
   hi: {
     advice: "ORCA सुझाव", areas: "मछली पकड़ने की सबसे अच्छी जगहें", within: "के अंदर", away: "दूर", chance: "मछली की उम्मीद",
@@ -38,6 +41,9 @@ const T: Record<Language, Record<string, string>> = {
     fuel: "ईंधन", catch: "मछली", revenue: "आमदनी", profit: "मुनाफ़ा",
     econNote: "अनुमान — कोई वादा नहीं।", barsCaption: "कारक: क्लोरोफिल · SST · फ्रंट · समुद्र · समय",
     pfzTitle: "PFZ बुद्धिमत्ता", pfzSub: "संभावित मत्स्य क्षेत्र",
+    noNearby: "इसके भीतर कोई INCOIS PFZ सलाह नहीं",
+    nearestIs: "निकटतम INCOIS PFZ सलाह लगभग",
+    kmAway: "किमी दूर है।"
   },
   kn: {
     advice: "ORCA ಶಿಫಾರಸು", areas: "ಮೀನುಗಾರಿಕೆಗೆ ಉತ್ತಮ ಪ್ರದೇಶಗಳು", within: "ಒಳಗೆ", away: "ದೂರ", chance: "ಸಾಧ್ಯತೆ",
@@ -50,6 +56,9 @@ const T: Record<Language, Record<string, string>> = {
     fuel: "ಇಂಧನ", catch: "ಮೀನು", revenue: "ಆದಾಯ", profit: "ಲಾಭ",
     econNote: "ಯೋಜನಾ ಅಂದಾಜು — ಖಾತರಿ ಇಲ್ಲ.", barsCaption: "ಅಂಶಗಳು: ಕ್ಲೋರೊಫಿಲ್ · SST · ಮುಂಭಾಗ · ಸಮುದ್ರ · ಸಮಯ",
     pfzTitle: "PFZ ಬುದ್ಧಿಮತ್ತೆ", pfzSub: "ಸಂಭಾವ್ಯ ಮೀನುಗಾರಿಕೆ ಪ್ರದೇಶಗಳು",
+    noNearby: "ಇದರ ಒಳಗೆ INCOIS PFZ ಸಲಹೆ ಇಲ್ಲ",
+    nearestIs: "ಹತ್ತಿರದ INCOIS PFZ ಸಲಹೆಯು ಸುಮಾರು",
+    kmAway: "ಕಿಮೀ ದೂರದಲ್ಲಿದೆ."
   },
 };
 
@@ -121,7 +130,7 @@ export default function FishingPanel({
       </div>
 
       {/* ---- PFZ ZONES ---- */}
-      {top.length > 0 && (
+      {data.pfz_status === "AVAILABLE" && top.length > 0 && (
         <div className="m-panel overflow-hidden">
           <div className="m-hd">
             <div>
@@ -272,6 +281,38 @@ export default function FishingPanel({
           <p style={{ padding: "6px 14px 8px", fontFamily: "Spline Sans Mono Variable, Consolas, monospace", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-faint)" }}>
             {t.barsCaption}
           </p>
+        </div>
+      )}
+
+      {/* ---- PFZ ZONES (NO NEARBY) ---- */}
+      {data.pfz_status === "NO_NEARBY_PFZ" && (
+        <div className="m-panel overflow-hidden">
+          <div className="m-hd">
+            <div>
+              <div style={{ fontFamily: "Spline Sans Mono Variable, Consolas, monospace", fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--ocean)" }}>
+                {t.pfzTitle}
+              </div>
+              <div style={{ fontFamily: "'Fraunces Variable', Georgia, serif", fontSize: 13, fontWeight: 700, color: "var(--text-mid)", marginTop: 1 }}>
+                {t.pfzSub}
+              </div>
+            </div>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--ocean-dim)" }}>
+              <SchoolGlyph size={22} />
+            </span>
+          </div>
+
+          <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-bright)" }}>
+              {language === "en" 
+                ? `No INCOIS PFZ advisory within ${data.radius_km} km of your location.` 
+                : `${data.radius_km} ${t.noNearby}.`}
+            </p>
+            {data.total_available > 0 && data.nearest_distance_km != null && (
+              <p style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                {t.nearestIs} {Math.round(data.nearest_distance_km)} {t.kmAway}
+              </p>
+            )}
+          </div>
         </div>
       )}
 

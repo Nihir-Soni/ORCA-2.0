@@ -134,6 +134,18 @@ def fishing_outlook(
     candidates = pfz_res.data.get("zones", []) if pfz_res.ok else []
     zones = _zone_payload(loc, candidates, ambient_sst, now.hour)
 
+    total_available = pfz_res.data.get("total_available", 0) if pfz_res.ok else 0
+    nearest_distance_km = pfz_res.data.get("nearest_distance_km") if pfz_res.ok else None
+
+    if not pfz_res.ok:
+        pfz_status = "UNAVAILABLE"
+    elif not zones and (total_available > 0 or pfz_res.mode == "LIVE"):
+        pfz_status = "NO_NEARBY_PFZ"
+    elif zones:
+        pfz_status = "AVAILABLE"
+    else:
+        pfz_status = "UNAVAILABLE"
+
     # ---- best hours to be on the water ----------------------------------
     wave_by_hour: Dict[int, float] = {}
     for h in range(24):
@@ -266,6 +278,9 @@ def fishing_outlook(
             "wind_speed_kmh": weather.data.get("wind_speed_kmh"),
             "sea_state": ocean.data.get("sea_state"),
         },
+        "pfz_status": pfz_status,
+        "total_available": total_available,
+        "nearest_distance_km": nearest_distance_km,
         "areas": zones,
         "best_window": {"from_hour": best_window[0], "to_hour": best_window[1]} if best_window else None,
         "hourly_ranking": [{"hour": h, "probability": p} for h, p in sorted(ranked_hours)],

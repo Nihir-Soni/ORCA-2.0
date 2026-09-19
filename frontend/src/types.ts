@@ -292,6 +292,9 @@ export interface FishingOutlook {
     wind_speed_kmh: number | null;
     sea_state: string | null;
   };
+  pfz_status: "AVAILABLE" | "NO_NEARBY_PFZ" | "UNAVAILABLE";
+  total_available: number;
+  nearest_distance_km: number | null;
   areas: FishingArea[];
   best_window: { from_hour: number; to_hour: number } | null;
   hourly_ranking: { hour: number; probability: number }[];
@@ -331,3 +334,99 @@ export interface ChatMessage {
   text: string;
   response?: ChatResponse;
 }
+
+// ---- Historical Marine Intelligence types --------------------------------
+// These mirror the exact shape returned by GET /api/historical, which comes
+// directly from analyze_historical_data() *before* timeseries stripping.
+
+export interface HistoricalStats {
+  first: number;
+  last: number;
+  mean: number;
+  min: number;
+  max: number;
+  change: number;
+  change_percent: number;
+  trend: "increasing" | "decreasing" | "stable" | "insufficient_data";
+  observation_count: number;
+}
+
+/** Daily time-series as parallel arrays of ISO date strings and float values. */
+export interface HistoricalTimeseries {
+  dates: string[];
+  values: number[];
+}
+
+export interface HistoricalVariable {
+  statistics: HistoricalStats;
+  timeseries: HistoricalTimeseries;
+}
+
+/** Weather comes back as aggregate statistics, not a daily timeseries. */
+export interface HistoricalWeatherStats {
+  mean_temperature: number;
+  mean_wind_speed: number;
+  max_wind_speed: number;
+  total_precipitation: number;
+  rainy_day_count: number;
+}
+
+export interface HistoricalWeatherVariable {
+  statistics: HistoricalWeatherStats;
+}
+
+export interface HistoricalAvailability {
+  status: "AVAILABLE" | "UNAVAILABLE";
+  reason?: string;
+}
+
+export interface HistoricalProvenance {
+  provider: string;
+  variable: string;
+  dataset?: string;
+  mode?: string;
+  requested_start?: string;
+  requested_end?: string;
+  actual_coverage_start?: string;
+  actual_coverage_end?: string;
+  observation_count?: number;
+  [key: string]: unknown;
+}
+
+export interface HistoricalCorrelation {
+  variable_a: string;
+  variable_b: string;
+  coefficient: number;
+  sample_count: number;
+}
+
+/** Full response from GET /api/historical */
+export interface HistoricalResponse {
+  analysis_type: string;
+  overall_status: string;
+  period: {
+    start: string;
+    end: string;
+    days_requested: number;
+  };
+  location: {
+    name: string;
+    latitude: number;
+    longitude: number;
+    state: string | null;
+  };
+  variables: {
+    chlorophyll?: HistoricalVariable;
+    sst?: HistoricalVariable;
+    current_speed?: HistoricalVariable;
+    weather?: HistoricalWeatherVariable;
+  };
+  availability: Record<string, HistoricalAvailability>;
+  provenance: HistoricalProvenance[];
+  correlations: HistoricalCorrelation[];
+}
+
+/** Variables supported by the Historical panel. */
+export type HistoricalVariable_ID = "chlorophyll" | "sst" | "current_speed" | "weather";
+
+export type HistoricalDays = 7 | 30 | 90;

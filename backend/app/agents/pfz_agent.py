@@ -42,6 +42,9 @@ def run(location: Location, when: datetime, count: int = 6, radius_km: float = 1
     mode = "DEMO"
     source = "DEMO"
     unavailable = []
+    total_available = 0
+    nearest_distance_km = None
+    provider_ok = True
 
     if live_enabled():
         pfz_res = incois_provider.fetch_pfz_zones(location.latitude, location.longitude, when)
@@ -50,6 +53,9 @@ def run(location: Location, when: datetime, count: int = 6, radius_km: float = 1
             mode = "LIVE"
             source = pfz_res.metadata.source
             stamp = pfz_res.metadata.valid_time
+            total_available = len(incois_zones)
+            if total_available > 0:
+                nearest_distance_km = incois_zones[0].get("distance_km")
             # Calculate distance and bearing for INCOIS zones relative to boat
             for z in incois_zones:
                 pt1 = (location.latitude, location.longitude)
@@ -63,6 +69,7 @@ def run(location: Location, when: datetime, count: int = 6, radius_km: float = 1
         else:
             unavailable.append("INCOIS PFZ advisory unavailable")
             mode = "UNAVAILABLE"
+            provider_ok = False
     if not live_enabled():
         raw = demo_store.pfz_zones(location.latitude, location.longitude, location.name, when, count=count, radius_km=radius_km)
         for z in raw:
@@ -100,9 +107,11 @@ def run(location: Location, when: datetime, count: int = 6, radius_km: float = 1
 
     return AgentResult(
         agent="pfz",
-        ok=True if (not live_enabled() or raw) else False,
+        ok=provider_ok,
         location=location,
         data={"zones": [z.model_dump() for z in zones],
+              "total_available": total_available,
+              "nearest_distance_km": nearest_distance_km,
               "excluded_zones": excluded,
               "excluded_count": len(excluded),
               "method": "Official INCOIS advisory" if mode == "LIVE" else "SST front + chlorophyll concentration ranking (INCOIS methodology)",
@@ -113,5 +122,5 @@ def run(location: Location, when: datetime, count: int = 6, radius_km: float = 1
         confidence=zones[0].confidence if zones else 0.0,
         mode=mode, # type: ignore[arg-type]
         unavailable=unavailable,
-        error="INCOIS PFZ data unavailable" if (live_enabled() and not raw) else None
+        error="INCOIS PFZ data unavailable" if not provider_ok else None
     )

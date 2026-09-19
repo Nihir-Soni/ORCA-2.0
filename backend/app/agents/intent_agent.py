@@ -46,6 +46,7 @@ INTENT_KEYWORDS: Dict[str, List[str]] = {
     "alerts": ["cyclone", "storm", "warning", "alert", "tsunami", "चक्रवात", "चक्रीवादळ",
                "तूफान", "वादळ", "ಚಂಡಮಾರುತ", "ಬಿರುಗಾಳಿ", "चेतावनी", "ಎಚ್ಚರಿಕೆ", "ಅಲರ್ಟ್"],
     "explain": ["why", "explain", "reason", "क्यों", "क्यूँ", "का ", "कारण", "कशामुळे"],
+    "historical_analysis": ["historical", "history", "last 7 days", "last week", "last 30 days", "last month", "last 3 months", "changed", "change", "trend", "declined", "increased", "decreased", "over time", "compared with", "पिछले", "बदलाव", "ಹಿಂದಿನ", "ಬದಲಾವಣೆ"],
     "restricted": ["restricted", "boundary", "border", "prohibited", "प्रतिबंधित", "सीमा",
                    "बंदी", "निषिद्ध", "ನಿರ್ಬಂಧಿತ", "ಗಡಿ"],
 }
@@ -111,9 +112,20 @@ def _extract_date(text: str, base: datetime) -> str:
     return base.date().isoformat()
 
 
+def _extract_date_range(text: str, base: datetime) -> Tuple[Optional[str], Optional[str]]:
+    t = _normalise(text)
+    if "last 3 months" in t or "पिछले 3 महीने" in t or "ಕಳೆದ 3 ತಿಂಗಳು" in t:
+        return (base - timedelta(days=90)).date().isoformat(), base.date().isoformat()
+    if "last month" in t or "last 30 days" in t or "पिछले 30 दिन" in t or "पिछले महीने" in t or "ಕಳೆದ ತಿಂಗಳು" in t or "ಕಳೆದ 30 ದಿನ" in t:
+        return (base - timedelta(days=30)).date().isoformat(), base.date().isoformat()
+    if "last week" in t or "last 7 days" in t or "पिछले 7 दिन" in t or "पिछले सप्ताह" in t or "ಕಳೆದ ವಾರ" in t or "ಕಳೆದ 7 ದಿನ" in t:
+        return (base - timedelta(days=7)).date().isoformat(), base.date().isoformat()
+    return None, None
+
+
 # Most specific question wins: "safest route to the fishing zone" is a ROUTE
 # question even though it also mentions fishing zones.
-INTENT_PRIORITY = ["emergency", "route", "fishing_safety", "find_pfz", "weather", "marine_conditions", "restricted", "alerts", "explain"]
+INTENT_PRIORITY = ["emergency", "route", "historical_analysis", "fishing_safety", "find_pfz", "weather", "marine_conditions", "restricted", "alerts", "explain"]
 
 
 def _classify(text: str) -> str:
@@ -165,6 +177,7 @@ EXTRA_BY_INTENT = {
     "alerts":         [],
     "restricted":     [],
     "explain":        [],
+    "historical_analysis": ["historical"],
 }
 
 
@@ -186,7 +199,7 @@ def run(message: str, *, language: Optional[Language] = None,
         payload = extract_intent(message)
         intent_type = str(payload.get("intent", ""))
         if intent_type not in {"fishing_safety", "find_pfz", "fishing_outlook", "route", "emergency",
-                               "weather", "marine_conditions", "alerts", "restricted", "general_query"}:
+                               "weather", "marine_conditions", "alerts", "restricted", "general_query", "historical_analysis"}:
             raise GroqIntentError("AI mode is unavailable")
         activity = str(payload.get("activity", "fishing"))
         if activity not in {"fishing", "travel"}:
@@ -205,6 +218,9 @@ def run(message: str, *, language: Optional[Language] = None,
 
     # --- time -------------------------------------------------------------
     time_str = _extract_time(message) or (str(payload.get("time")) if payload.get("time") else None)
+    
+    start_str, end_str = _extract_date_range(message, now)
+    
     date_str = str(payload.get("date")) if payload.get("date") else _extract_date(message, now)
     if time_str is None and previous and previous.time and not _mentions_new_day(message):
         time_str = previous.time
@@ -220,6 +236,8 @@ def run(message: str, *, language: Optional[Language] = None,
         location=location,
         location_text=(location.name if location else ""),
         date=date_str,
+        start_date=start_str,
+        end_date=end_str,
         time=time_str or f"{now.hour:02d}:00",
         language=(payload.get("language") if payload.get("language") in {"en", "hi", "kn"} else lang),
         raw_query=message,

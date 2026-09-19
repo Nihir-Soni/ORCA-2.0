@@ -32,6 +32,7 @@ from ..services.i18n import t
 from ..services.groq_intent import GroqIntentError
 from . import (cyclone_agent, explanation_agent, gis_agent, intent_agent,
                ocean_agent, pfz_agent, risk_agent, route_agent, weather_agent)
+from ..services.historical import analyze_historical_data
 
 # session_id -> last intent (gives follow-ups their context)
 _SESSIONS: Dict[str, Intent] = {}
@@ -105,6 +106,18 @@ def handle(req: ChatRequest) -> ChatResponse:
 
     # ---- node 2: specialists, concurrently -------------------------------
     jobs = {}
+    historical_data: Optional[Dict[str, Any]] = None
+    
+    if intent.intent == "historical_analysis":
+        # Extract dates or default to last 30 days
+        now_date = now_ist().date()
+        st_date = intent.start_date or (now_date - timedelta(days=30)).isoformat()
+        ed_date = intent.end_date or now_date.isoformat()
+        historical_data = analyze_historical_data(location, st_date, ed_date)
+        
+        # Add to trace
+        trace.append(AgentTrace(agent="historical", status="ok", latency_ms=0, summary="Historical data fetched", source="UPSTASH", mode="HISTORICAL"))
+    
     with ThreadPoolExecutor(max_workers=5) as pool:
         if "weather" in needs:
             jobs["weather"] = pool.submit(weather_agent.run, location, when)
@@ -146,6 +159,8 @@ def handle(req: ChatRequest) -> ChatResponse:
 
     if config_mode == "DEMO":
         mode = "DEMO"
+    elif historical_data and historical_data.get("overall_status") == "PARTIAL_LIVE":
+        mode = "PARTIAL_LIVE"
     elif all_live:
         mode = "LIVE"
     elif any_unavailable:
@@ -190,6 +205,7 @@ def handle(req: ChatRequest) -> ChatResponse:
         intent=intent, risk=risk, pfz=pfz_zones, routes=routes, geofence=geofence,
         weather=weather_d, ocean=ocean_d, cyclone=cyclone_d, gis=gis_d,
         agents=agents, mode=mode, when=when, chat_mode=req.mode,  # type: ignore[arg-type]
+        historical=historical_data
     )
     trace.append(_trace(expl_res, "explanation"))
 
@@ -206,6 +222,7 @@ def handle(req: ChatRequest) -> ChatResponse:
         geofence=geofence,
         alerts=cyclone_d.get("alerts", []),
         evidence=evidence,
+        historical=historical_data,
         trace=trace,
         suggestions=expl_res.data.get("suggestions", []),
         mode=mode,  # type: ignore[arg-type]
