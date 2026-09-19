@@ -114,7 +114,13 @@ def handle(req: ChatRequest) -> ChatResponse:
         st_date = intent.start_date or (now_date - timedelta(days=30)).isoformat()
         ed_date = intent.end_date or now_date.isoformat()
         historical_data = analyze_historical_data(location, st_date, ed_date)
-        
+
+        # Strip timeseries before passing to LLM — saves context window tokens.
+        # The /api/historical dashboard endpoint calls analyze_historical_data
+        # directly and intentionally keeps timeseries for chart rendering.
+        for _var in historical_data.get("variables", {}).values():
+            _var.pop("timeseries", None)
+
         # Add to trace
         trace.append(AgentTrace(agent="historical", status="ok", latency_ms=0, summary="Historical data fetched", source="UPSTASH", mode="HISTORICAL"))
     

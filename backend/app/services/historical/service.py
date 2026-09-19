@@ -252,11 +252,5 @@ def analyze_historical_data(
                 "sample_count": len(aligned_curr)
             })
 
-    # Clean up the timeseries from the final payload to save LLM context window space, 
-    # since statistics are what we need the LLM to reason over.
-    for var in evidence["variables"].values():
-        if "timeseries" in var:
-            del var["timeseries"]
-
     evidence["overall_status"] = overall_status
     return evidence
