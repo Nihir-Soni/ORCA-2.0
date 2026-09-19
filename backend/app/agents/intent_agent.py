@@ -201,6 +201,11 @@ def _activity(text: str) -> str:
 # Every question gets the full safety core — a user who asks "is there a cyclone"
 # still deserves a go/no-go verdict. Intent only adds the optional specialists.
 SAFETY_CORE = ["weather", "ocean", "cyclone", "gis", "risk"]
+
+# Historical intent does NOT need a risk score — it answers trend questions.
+# We still fetch weather/ocean for context but skip risk computation.
+HISTORICAL_NEEDS = ["historical"]
+
 EXTRA_BY_INTENT = {
     "fishing_safety": [],
     "find_pfz":       ["pfz"],
@@ -208,11 +213,13 @@ EXTRA_BY_INTENT = {
     "alerts":         [],
     "restricted":     [],
     "explain":        [],
-    "historical_analysis": ["historical"],
+    "historical_analysis": [],  # handled via HISTORICAL_NEEDS below
 }
 
 
 def needs_for(intent_type: str) -> List[str]:
+    if intent_type == "historical_analysis":
+        return HISTORICAL_NEEDS
     return SAFETY_CORE + EXTRA_BY_INTENT.get(intent_type, [])
 
 

@@ -137,6 +137,83 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
     lang: Language = intent.language
     parts: List[str] = []
 
+    # ── Historical-analysis path ───────────────────────────────────────────
+    # When the intent is a trend/history query, skip the safety verdict entirely.
+    # The answer is grounded exclusively in the historical timeseries statistics.
+    if getattr(intent, "intent", None) == "historical_analysis":
+        if chat_mode == "AI" and historical:
+            from ..services import groq_intent
+            context_data = {
+                "intent": intent.model_dump() if intent else None,
+                "historical": historical,
+                "sources": [],
+            }
+            ai_answer = groq_intent.generate_explanation(context_data, lang)
+            if ai_answer:
+                return AgentResult(
+                    agent="explanation", ok=True,
+                    data={
+                        "answer": ai_answer,
+                        "evidence": [],
+                        "suggestions": SUGGESTIONS.get(lang, SUGGESTIONS["en"]),
+                        "disclaimer": t("disclaimer", lang),
+                    },
+                    source="ORCA",
+                    timestamp=when.isoformat(timespec="seconds"),
+                    confidence=0.9,
+                    mode=mode,  # type: ignore[arg-type]
+                )
+
+        # OFFLINE deterministic fallback for historical intent
+        if historical:
+            vars_ = historical.get("variables", {})
+            avail = historical.get("availability", {})
+            period = historical.get("period", {})
+            loc_name = historical.get("location", {}).get("name", "this location")
+            start = period.get("start", "")
+            end = period.get("end", "")
+            lines = [f"Historical marine analysis for {loc_name} ({start} to {end}):"]
+            for var_id, label, unit in [
+                ("chlorophyll", "Chlorophyll", "mg/m³"),
+                ("sst", "Sea surface temperature", "°C"),
+                ("current_speed", "Current speed", "m/s"),
+            ]:
+                st = avail.get(var_id, {}).get("status", "UNAVAILABLE")
+                if st == "AVAILABLE" and var_id in vars_:
+                    s = vars_[var_id].get("statistics", {})
+                    trend = s.get("trend", "stable")
+                    chg = s.get("change_percent")
+                    chg_str = f" ({chg:+.1f}%)" if chg is not None else ""
+                    lines.append(
+                        f"{label}: {s.get('first', '-')} → {s.get('last', '-')} {unit}, "
+                        f"trend {trend}{chg_str} [Source: {historical.get('provenance', [{}])[0].get('provider', 'Copernicus/Open-Meteo')}]."
+                    )
+                else:
+                    reason = avail.get(var_id, {}).get("reason", "Data unavailable.")
+                    lines.append(f"{label}: {reason}")
+            answer = " ".join(lines)
+        else:
+            answer = (
+                "ORCA was unable to retrieve historical marine data for this location. "
+                "Please try again or select a different period."
+            )
+
+        return AgentResult(
+            agent="explanation", ok=True,
+            data={
+                "answer": answer,
+                "evidence": [],
+                "suggestions": SUGGESTIONS.get(lang, SUGGESTIONS["en"]),
+                "disclaimer": t("disclaimer", lang),
+            },
+            source="ORCA",
+            timestamp=when.isoformat(timespec="seconds"),
+            confidence=0.9,
+            mode=mode,  # type: ignore[arg-type]
+        )
+
+    # ── Standard safety/risk path ──────────────────────────────────────────
+
     # ---- WHAT ------------------------------------------------------------
     if risk is not None:
         verdict = t(verdict_key(risk.category), lang)
@@ -190,7 +267,7 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
         parts.append(t("demo_mode", lang))
 
     answer = " ".join(parts)
-    
+
     if chat_mode == "AI":
         from ..services import groq_intent
         context_data = {
@@ -224,3 +301,4 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
         confidence=0.9,
         mode=mode,  # type: ignore[arg-type]
     )
+
