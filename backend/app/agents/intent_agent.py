@@ -234,16 +234,23 @@ def run(message: str, *, language: Optional[Language] = None,
     source = "KEYWORD_OFFLINE"
     payload: Dict[str, Any] = {}
     if mode == "AI":
-        payload = extract_intent(message)
-        intent_type = str(payload.get("intent", ""))
-        if intent_type not in {"fishing_safety", "find_pfz", "fishing_outlook", "route", "emergency",
-                               "weather", "marine_conditions", "alerts", "restricted", "general_query", "historical_analysis"}:
-            raise GroqIntentError("AI mode is unavailable")
-        activity = str(payload.get("activity", "fishing"))
-        if activity not in {"fishing", "travel"}:
-            raise GroqIntentError("AI mode is unavailable")
-        source = getattr(payload, "provider", "GROQ")
-        source = "NVIDIA_FALLBACK" if source == "NVIDIA_FALLBACK" else "GROQ_LLM"
+        try:
+            payload = extract_intent(message)
+            intent_type = str(payload.get("intent", ""))
+            if intent_type not in {"fishing_safety", "find_pfz", "fishing_outlook", "route", "emergency",
+                                   "weather", "marine_conditions", "alerts", "restricted", "general_query", "historical_analysis"}:
+                raise GroqIntentError("AI mode is unavailable")
+            activity = str(payload.get("activity", "fishing"))
+            if activity not in {"fishing", "travel"}:
+                raise GroqIntentError("AI mode is unavailable")
+            source = getattr(payload, "provider", "GROQ")
+            source = "NVIDIA_FALLBACK" if source == "NVIDIA_FALLBACK" else "GROQ_LLM"
+        except GroqIntentError:
+            print("AI intent unavailable; falling back to offline keywords.")
+            payload = {}
+            intent_type = _classify(message)
+            activity = _activity(message)
+            source = "KEYWORD_OFFLINE"
     else:
         intent_type = _classify(message)
         activity = _activity(message)

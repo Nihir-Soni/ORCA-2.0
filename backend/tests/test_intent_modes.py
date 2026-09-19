@@ -52,12 +52,13 @@ def test_ai_validates_and_normalizes_llm_payload():
     assert result.data["intent_source"] == "GROQ_LLM"
 
 
-def test_ai_rejects_invalid_intent():
+def test_ai_rejects_invalid_intent_falls_back():
     with patch("app.agents.intent_agent.extract_intent", return_value={"intent": "launch_missiles"}):
-        result = intent_agent.run("anything", mode="AI")
+        result = intent_agent.run("is it safe to go fishing", mode="AI")
 
-    assert result.ok is False
-    assert "AI mode is unavailable" in (result.error or "")
+    assert result.ok is True
+    assert result.data["intent"] == "fishing_safety"  # keyword fallback matched 'safe'
+    assert result.data["intent_source"] == "KEYWORD_OFFLINE"
 
 
 def test_chat_request_defaults_to_offline():
