@@ -455,65 +455,7 @@ export default function Landing({
 
               </div>
 
-              {/* Demo scenarios */}
-              <div>
-                <div style={{
-                  fontFamily: "Spline Sans Mono Variable, Consolas, monospace",
-                  fontSize: 9,
-                  fontWeight: 700,
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  color: "var(--text-faint)",
-                  marginBottom: 10,
-                }}>
-                  {t.scenarios}
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {SCENARIOS.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => { onScenario(s.ask); }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "6px 12px",
-                        background: "rgba(10,25,41,0.8)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 2,
-                        color: "var(--text-mid)",
-                        fontSize: 12,
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
-                      onMouseEnter={e => {
-                        (e.currentTarget.style.borderColor = RISK_TAG_COLOR[s.tag] || "var(--ocean)");
-                        (e.currentTarget.style.background = `rgba(10,25,41,0.95)`);
-                      }}
-                      onMouseLeave={e => {
-                        (e.currentTarget.style.borderColor = "var(--border)");
-                        (e.currentTarget.style.background = "rgba(10,25,41,0.8)");
-                      }}
-                    >
-                      <span style={{
-                        fontFamily: "Spline Sans Mono Variable, Consolas, monospace",
-                        fontSize: 8,
-                        fontWeight: 800,
-                        letterSpacing: "0.1em",
-                        padding: "1px 5px",
-                        borderRadius: 1,
-                        background: RISK_TAG_COLOR[s.tag] ? `${RISK_TAG_COLOR[s.tag]}20` : "transparent",
-                        color: RISK_TAG_COLOR[s.tag] || "var(--ocean)",
-                        border: `1px solid ${RISK_TAG_COLOR[s.tag] ? RISK_TAG_COLOR[s.tag] + "50" : "transparent"}`,
-                      }}>
-                        {s.tag}
-                      </span>
-                      {s.label[language] ?? s.label.en}
-                    </button>
-                  ))}
-                </div>
-              </div>
+
             </div>
 
             {/* Right: Intelligence preview panel */}
