@@ -172,20 +172,20 @@ export default function SystemPanel({ mode, language = "en" }: { mode: string; l
 
   const crewText: Record<Language, { phase: string; agents: string[]; note: string }[]> = {
     en: [
-      { phase: "UNDERSTAND", agents: ["Intent"], note: "Rule-based, no LLM" },
-      { phase: "GATHER", agents: ["Weather", "Ocean", "PFZ", "Alerts", "GIS"], note: "5 agents concurrent" },
+      { phase: "UNDERSTAND", agents: ["Intent", "Planner"], note: "Keyword/LLM + Orchestrator" },
+      { phase: "GATHER", agents: ["Weather", "Ocean", "PFZ", "Cyclone", "GIS"], note: "5 agents concurrent" },
       { phase: "DECIDE", agents: ["Risk", "Route A*"], note: "Weighted + floors" },
       { phase: "EXPLAIN", agents: ["Explanation"], note: "EN / HI / KN + TTS" },
     ],
     hi: [
-      { phase: "समझो", agents: ["आशय"], note: "नियम-आधारित, LLM नहीं" },
-      { phase: "जुटाओ", agents: ["मौसम", "समुद्र", "PFZ", "चेतावनियाँ", "GIS"], note: "5 एजेंट एक साथ" },
+      { phase: "समझो", agents: ["आशय", "प्लानर"], note: "कीवर्ड/LLM + ऑर्केस्ट्रेटर" },
+      { phase: "जुटाओ", agents: ["मौसम", "समुद्र", "PFZ", "चक्रवात", "GIS"], note: "5 एजेंट एक साथ" },
       { phase: "तय करो", agents: ["रिस्क", "मार्ग A*"], note: "भारित + नियम" },
       { phase: "समझाओ", agents: ["व्याख्या"], note: "EN / HI / KN + TTS" },
     ],
     kn: [
-      { phase: "ಅರ್ಥ", agents: ["ಉದ್ದೇಶ"], note: "ನಿಯಮಾಧಾರಿತ, LLM ಇಲ್ಲ" },
-      { phase: "ಸಂಗ್ರಹ", agents: ["ಹವಾಮಾನ", "ಸಮುದ್ರ", "PFZ", "ಎಚ್ಚರಿಕೆ", "GIS"], note: "5 ಏಜೆಂಟ್ ಏಕಕಾಲ" },
+      { phase: "ಅರ್ಥ", agents: ["ಉದ್ದೇಶ", "ಪ್ಲಾನರ್"], note: "ಕೀವರ್ಡ್/LLM + ಆರ್ಕೆಸ್ಟ್ರೇಟರ್" },
+      { phase: "ಸಂಗ್ರಹ", agents: ["ಹವಾಮಾನ", "ಸಮುದ್ರ", "PFZ", "ಚಂಡಮಾರುತ", "GIS"], note: "5 ಏಜೆಂಟ್ ಏಕಕಾಲ" },
       { phase: "ನಿರ್ಧಾರ", agents: ["ಅಪಾಯ", "ಮಾರ್ಗ A*"], note: "ತೂಕ + ನಿಯಮ" },
       { phase: "ವಿವರಣೆ", agents: ["ವಿವರಣೆ"], note: "EN / HI / KN + TTS" },
     ],
@@ -345,6 +345,7 @@ export default function SystemPanel({ mode, language = "en" }: { mode: string; l
                 </div>
               )}
               <div style={{
+                flex: 1,
                 minWidth: 110,
                 padding: "10px 12px",
                 border: "1px solid var(--border)",
