@@ -141,7 +141,7 @@ export default function SystemPanel({ mode, language = "en" }: { mode: string; l
         if (!alive) return;
         const row: FeedRow = {
           port: port.name, state: port.state, mode: f.ocean.mode,
-          source: f.ocean.source === "OPEN_METEO" ? "Open-Meteo" : "Demo store",
+          source: f.ocean.source && f.ocean.source.includes("Open-Meteo") ? "Open-Meteo" : "Demo store",
           latency: (f.ocean.latency_ms ?? 0) + (f.weather.latency_ms ?? 0),
           wave: fmt(f.ocean.measurements?.wave_height),
           wind: fmt(f.weather.measurements?.wind_speed),
