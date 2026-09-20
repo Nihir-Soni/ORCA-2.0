@@ -145,6 +145,10 @@ export default function Landing({
   const [visible, setVisible] = useState(false);
   const [pipelineStep, setPipelineStep] = useState(0);
 
+  const isLight = theme === "light";
+  const bgOverlay = isLight ? "rgba(251,247,237" : "rgba(5,14,24";
+  const bgSurface = isLight ? "rgba(245,239,224" : "rgba(10,25,41";
+
   // Entrance animation
   useEffect(() => {
     const id = setTimeout(() => setVisible(true), 100);
@@ -182,7 +186,7 @@ export default function Landing({
           inset: 0,
           zIndex: 1,
           pointerEvents: "none",
-          background: "linear-gradient(180deg, rgba(5,14,24,0.72) 0%, rgba(5,14,24,0.45) 40%, rgba(5,14,24,0.78) 80%, rgba(5,14,24,0.95) 100%)",
+          background: `linear-gradient(180deg, ${bgOverlay},0.72) 0%, ${bgOverlay},0.45) 40%, ${bgOverlay},0.78) 80%, ${bgOverlay},0.95) 100%)`,
         }}
       />
 
@@ -196,7 +200,7 @@ export default function Landing({
           justifyContent: "space-between",
           padding: "18px 32px",
           borderBottom: "1px solid var(--border)",
-          background: "rgba(5,14,24,0.6)",
+          background: `${bgOverlay},0.6)`,
           backdropFilter: "blur(8px)",
         }}>
           {/* Logo */}
@@ -382,7 +386,7 @@ export default function Landing({
                     key={f.keyEn}
                     onClick={() => onEnter(f.tab)}
                     style={{
-                      background: "rgba(10,25,41,0.7)",
+                      background: `${bgSurface},0.7)`,
                       border: "1px solid var(--border-mid)",
                       borderRadius: 3,
                       padding: "16px 14px",
@@ -396,7 +400,7 @@ export default function Landing({
                       (e.currentTarget.style.borderColor = "var(--ocean)");
                     }}
                     onMouseLeave={e => {
-                      (e.currentTarget.style.background = "rgba(10,25,41,0.7)");
+                      (e.currentTarget.style.background = `${bgSurface},0.7)`);
                       (e.currentTarget.style.borderColor = "var(--border-mid)");
                     }}
                   >
@@ -427,7 +431,7 @@ export default function Landing({
                     gap: 10,
                     padding: "12px 28px",
                     background: "var(--ocean)",
-                    color: "#020810",
+                    color: "var(--bg)",
                     border: "none",
                     borderRadius: 2,
                     fontFamily: "Spline Sans Mono Variable, Consolas, monospace",
@@ -462,7 +466,7 @@ export default function Landing({
             <div style={{ width: 300 }}>
               {/* Live metrics card */}
               <div style={{
-                background: "rgba(10,25,41,0.85)",
+                background: `${bgSurface},0.85)`,
                 border: "1px solid var(--border-mid)",
                 borderRadius: 3,
                 backdropFilter: "blur(12px)",
@@ -593,7 +597,7 @@ export default function Landing({
                   { label: "Data Edition", value: "SIH26176" },
                 ].map((s) => (
                   <div key={s.label} style={{
-                    background: "rgba(10,25,41,0.75)",
+                    background: `${bgSurface},0.75)`,
                     border: "1px solid var(--border)",
                     borderRadius: 2,
                     padding: "10px 12px",
@@ -616,7 +620,7 @@ export default function Landing({
         <div style={{
           borderTop: "1px solid var(--border)",
           padding: "12px 32px",
-          background: "rgba(5,14,24,0.7)",
+          background: `${bgOverlay},0.7)`,
           backdropFilter: "blur(8px)",
           display: "flex",
           alignItems: "center",
