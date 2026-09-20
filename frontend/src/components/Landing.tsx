@@ -196,9 +196,11 @@ export default function Landing({
         {/* ---- TOP BAR ---- */}
         <div style={{
           display: "flex",
+          flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "18px 32px",
+          gap: 16,
+          padding: "16px",
           borderBottom: "1px solid var(--border)",
           background: `${bgOverlay},0.6)`,
           backdropFilter: "blur(8px)",
@@ -232,7 +234,7 @@ export default function Landing({
           </div>
 
           {/* Mode + Language */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
             {/* Mode badge */}
             <div style={{
               display: "flex",
@@ -315,13 +317,13 @@ export default function Landing({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "48px 32px",
+            padding: "32px 16px",
             transition: "opacity 0.8s ease, transform 0.8s ease",
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(24px)",
           }}
         >
-          <div style={{ maxWidth: 1100, width: "100%", display: "grid", gridTemplateColumns: "1fr auto", gap: 60, alignItems: "center" }}>
+          <div className="mx-auto w-full max-w-[1100px] grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 lg:gap-14 items-center">
 
             {/* Left: headline + features + actions */}
             <div>
@@ -380,7 +382,7 @@ export default function Landing({
               </p>
 
               {/* Feature links */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 40 }}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
                 {FEATURES.map((f) => (
                   <button
                     key={f.keyEn}
@@ -463,7 +465,7 @@ export default function Landing({
             </div>
 
             {/* Right: Intelligence preview panel */}
-            <div style={{ width: 300 }}>
+            <div className="w-full lg:w-[300px]">
               {/* Live metrics card */}
               <div style={{
                 background: `${bgSurface},0.85)`,
@@ -619,7 +621,7 @@ export default function Landing({
         {/* ---- FOOTER ---- */}
         <div style={{
           borderTop: "1px solid var(--border)",
-          padding: "12px 32px",
+          padding: "12px 16px",
           background: `${bgOverlay},0.7)`,
           backdropFilter: "blur(8px)",
           display: "flex",

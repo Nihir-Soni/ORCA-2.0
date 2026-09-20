@@ -343,12 +343,12 @@ export default function App() {
       {/* ====== HEADER ====== */}
       <header style={{ background: "var(--surface)", borderBottom: "1px solid var(--border-mid)" }}>
         {/* Top bar */}
-        <div className="flex items-center gap-0" style={{ minHeight: 58 }}>
+        <div className="flex items-center gap-0 overflow-x-auto no-scrollbar" style={{ minHeight: 58 }}>
           {/* Identity */}
           <button
             onClick={() => setTab("landing")}
             title="Back to the front page"
-            className="flex items-center gap-3 px-5 py-3"
+            className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 shrink-0"
             style={{ borderRight: "1px solid var(--border)" }}
           >
             <OrcaLogo size={42} className="shrink-0" style={{ color: "var(--ocean)" } as React.CSSProperties} />
@@ -482,7 +482,7 @@ export default function App() {
           <button
             onClick={() => setSosOpen(true)}
             disabled={!place}
-            className="flex items-center gap-2 px-5 py-3 font-mono text-[11px] font-bold tracking-widest uppercase transition-all disabled:opacity-30"
+            className="flex items-center shrink-0 gap-2 px-4 sm:px-5 py-3 font-mono text-[11px] font-bold tracking-widest uppercase transition-all disabled:opacity-30"
             style={{
               borderLeft: "1px solid rgba(239,68,68,0.4)",
               background: "rgba(239,68,68,0.1)",
@@ -498,7 +498,7 @@ export default function App() {
         </div>
 
         {/* Nav tabs */}
-        <nav className="flex items-end gap-5 px-5" style={{ borderTop: "1px solid var(--border)" }}>
+        <nav className="flex items-end gap-3 sm:gap-5 px-3 sm:px-5 overflow-x-auto no-scrollbar" style={{ borderTop: "1px solid var(--border)" }}>
           {(["home", "ask", "historical", "authority", "system"] as AppTab[]).map((x) => (
             <button key={x} onClick={() => setTab(x)} className={`tab mt-1 flex items-center gap-2 ${tab === x ? "tab-on" : ""}`}>
               <span style={{ fontSize: 10, opacity: 0.6 }}>{TAB_ICON[x]}</span>
@@ -523,14 +523,14 @@ export default function App() {
       )}
 
       {/* ====== MAIN CONTENT ====== */}
-      <main className="flex min-h-0 flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden">
 
         {/* ===== HOME TAB ===== */}
         {tab === "home" && (
-          <div className="flex min-h-0 flex-1 flex-col gap-0 p-4 lg:flex-row lg:gap-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 p-3 sm:p-4 lg:flex-row lg:overflow-hidden">
 
             {/* Left sidebar: marine status */}
-            <div className="hidden w-72 shrink-0 flex-col gap-3 lg:flex">
+            <div className="flex w-full shrink-0 flex-col gap-3 lg:w-72 lg:overflow-y-auto no-scrollbar">
               {/* Location picker */}
               <LocationPicker current={place} language={language} onPick={setPlace} />
 
@@ -672,7 +672,7 @@ export default function App() {
             </div>
 
             {/* Center: Map */}
-            <div className="min-h-0 flex-1">
+            <div className="flex flex-col min-h-[450px] flex-1 lg:min-h-0">
               {/* Mobile location picker */}
               {loadingOutlook && !outlook && (
                 <div
@@ -740,7 +740,7 @@ export default function App() {
             </div>
 
             {/* Right sidebar: intelligence */}
-            <div className="hidden w-80 shrink-0 flex-col gap-3 overflow-y-auto lg:flex" style={{ maxHeight: "calc(100vh - 120px)" }}>
+            <div className="flex w-full shrink-0 flex-col gap-3 lg:w-80 lg:overflow-y-auto no-scrollbar">
               {outlook && <FishingPanel data={outlook} language={language} isPortSelected={place?.source === "port" || place?.source === "default"} onSelectArea={(rank) => setFocusRank(rank)} />}
             </div>
           </div>
@@ -749,8 +749,8 @@ export default function App() {
         {/* ===== ASK TAB ===== */}
         {tab === "ask" && (
           <>
-            <div className="grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[minmax(340px,1fr)_1.6fr]">
-              <div className="flex flex-col min-h-0 gap-3" style={{ height: "calc(100vh - 120px)", minHeight: 460 }}>
+            <div className="grid min-h-0 flex-1 gap-4 p-3 sm:p-4 grid-cols-1 lg:grid-cols-[minmax(340px,1fr)_1.6fr] lg:overflow-hidden">
+              <div className="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto min-h-[460px]">
                 <LocationPicker current={place} language={language} onPick={setPlace} />
                 <ChatPanel
                   messages={messages}
@@ -764,10 +764,7 @@ export default function App() {
                 />
               </div>
 
-              <div
-                className={`min-h-0 ${latest ? "space-y-3 overflow-y-auto" : "flex flex-col"}`}
-                style={{ height: "calc(100vh - 120px)", minHeight: 460 }}
-              >
+              <div className={`flex flex-col min-h-[450px] lg:min-h-0 gap-3 ${latest ? "lg:overflow-y-auto" : ""}`}>
                 {latest && <ConditionsStrip res={latest} language={latest.language} />}
 
                 <MarineMap
