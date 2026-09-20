@@ -280,6 +280,7 @@ export interface FishingOutlook {
     state: string | null;
     nearest_landing_centre: string;
     distance_from_shore_km: number;
+    is_on_land: boolean;
   };
   generated_at: string;
   radius_km: number;

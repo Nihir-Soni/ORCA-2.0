@@ -18,7 +18,7 @@ from ..agents import (cyclone_agent, gis_agent, ocean_agent, pfz_agent, risk_age
 from ..data import demo_store
 from ..data.demo_store import IST, now_ist
 from ..data.geo import (RESTRICTED_ZONES, distance_from_shore_km, haversine_km,
-                        nearest_port, point_in_polygon, zone_window_text, zones_near)
+                        nearest_port, point_in_polygon, zone_window_text, zones_near, is_on_land)
 from ..schemas import Location
 from ..services import fishing, plain_language
 
@@ -266,6 +266,7 @@ def fishing_outlook(
             "name": loc.name, "state": loc.state,
             "nearest_landing_centre": port["name"],
             "distance_from_shore_km": round(distance_from_shore_km(lat, lon), 1),
+            "is_on_land": is_on_land(lat, lon),
         },
         "generated_at": now.isoformat(timespec="seconds"),
         "radius_km": radius_km,
