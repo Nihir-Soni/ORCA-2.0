@@ -749,7 +749,7 @@ export default function App() {
         {/* ===== ASK TAB ===== */}
         {tab === "ask" && (
           <>
-            <div className="grid min-h-0 flex-1 gap-4 p-3 sm:p-4 grid-cols-1 lg:grid-cols-[minmax(340px,1fr)_1.6fr] lg:overflow-hidden">
+            <div className="grid min-h-0 flex-1 gap-4 p-3 sm:p-4 grid-cols-1 lg:grid-cols-[minmax(340px,1fr)_1.6fr] lg:grid-rows-1 lg:overflow-hidden">
               <div className="flex flex-col gap-3 h-[500px] lg:h-full lg:min-h-0">
                 <LocationPicker current={place} language={language} onPick={setPlace} />
                 <div className="flex-1 min-h-0 flex flex-col">
