@@ -52,20 +52,20 @@ export default {
         // Legacy alias paper/ink — mapped to new marine palette so any
         // residual Tailwind classes don't error
         paper: {
-          50:  "#0A1929",
-          100: "#0F2236",
-          150: "#132A42",
-          200: "#1A3652",
-          300: "#234462",
-          400: "#2E5478",
+          50:  "var(--surface)",
+          100: "var(--surface-2)",
+          150: "var(--surface-3)",
+          200: "var(--surface-3)",
+          300: "var(--border)",
+          400: "var(--border-strong)",
         },
         ink: {
-          900: "#E8F4F8",
-          800: "#C8DDE8",
-          700: "#A8C8D8",
-          500: "#8BAFC4",
-          400: "#6A94AB",
-          300: "#4A6E85",
+          900: "var(--text-bright)",
+          800: "var(--text-bright)",
+          700: "var(--text-mid)",
+          500: "var(--text-mid)",
+          400: "var(--text-dim)",
+          300: "var(--text-faint)",
         },
         chart: {
           700: "#007A96",
