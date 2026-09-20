@@ -45,33 +45,33 @@
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg:           #F8FAFC;
-  --surface:      #FFFFFF;
-  --surface-2:    #F1F5F9;
-  --surface-3:    #E2E8F0;
-  --border:       rgba(148, 163, 184, 0.2);
-  --border-mid:   rgba(148, 163, 184, 0.3);
-  --border-strong:rgba(148, 163, 184, 0.5);
+  --bg:           #FBF7ED;
+  --surface:      #F5EFE0;
+  --surface-2:    #EFE7D2;
+  --surface-3:    #E5DAC0;
+  --border:       rgba(120, 113, 108, 0.2);
+  --border-mid:   rgba(120, 113, 108, 0.3);
+  --border-strong:rgba(120, 113, 108, 0.5);
   --ocean:        #0284C7;
   --ocean-bright: #0369A1;
   --ocean-dim:    #0EA5E9;
-  --text-bright:  #0F172A;
-  --text-mid:     #475569;
-  --text-dim:     #64748B;
-  --text-faint:   #94A3B8;
+  --text-bright:  #1C1917;
+  --text-mid:     #44403C;
+  --text-dim:     #57534E;
+  --text-faint:   #78716C;
   --risk-low:     #16A34A;
   --risk-mod:     #CA8A04;
   --risk-high:    #EA580C;
   --risk-ext:     #DC2626;
   --emergency:    #DC2626;
-  --rule:         rgba(148, 163, 184, 0.2);
-  --rule-strong:  rgba(148, 163, 184, 0.5);
-  --rule-faint:   rgba(148, 163, 184, 0.1);
+  --rule:         rgba(120, 113, 108, 0.2);
+  --rule-strong:  rgba(120, 113, 108, 0.5);
+  --rule-faint:   rgba(120, 113, 108, 0.1);
   /* Legacy aliases used by existing component inline styles */
   --chart-teal:   #0284C7;
-  --paper:        #FFFFFF;
-  --paper-bright: #F1F5F9;
-  --ink:          #0F172A;
+  --paper:        #F5EFE0;
+  --paper-bright: #EFE7D2;
+  --ink:          #1C1917;
 }
 
 /* ---- Reset + base ---- */
@@ -330,7 +330,7 @@ path.zone-hatch-info     { fill: url(#hatch-info);     fill-opacity: 1; }
 .leaflet-tooltip-top.storm-label::before { border-top-color: #EF4444; }
 
 [data-theme="light"] .leaflet-tooltip.storm-label {
-  background: #FFFFFF;
+  background: var(--surface);
   color: #DC2626;
   border: 1.5px solid #DC2626;
   box-shadow: 0 3px 8px rgba(0,0,0,0.15);
@@ -458,7 +458,8 @@ path.zone-hatch-info     { fill: url(#hatch-info);     fill-opacity: 1; }
   .btn-ocean:disabled { opacity: 0.4; cursor: not-allowed; }
 
   [data-theme="light"] .btn-ocean {
-    color: #FFFFFF;
+    background: var(--ocean);
+    color: var(--surface);
   }
   [data-theme="light"] .btn-ocean:hover:not(:disabled) {
     box-shadow: 0 6px 20px rgba(2, 132, 199, 0.3);
