@@ -211,6 +211,8 @@ export interface FishingArea {
   sst_c: number | null;
   chlorophyll_mg_m3: number | null;
   wave_height_m: number | null;
+  environmental_suitability: number | null;
+  environmental_data_available: boolean;
   probability: number;
   value_score: number;
   rating: CatchRating;

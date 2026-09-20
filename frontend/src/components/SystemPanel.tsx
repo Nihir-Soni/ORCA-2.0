@@ -29,7 +29,7 @@ const L10N: Record<Language, Record<string, string>> = {
     nowReading: "NOW READING", wave: "WAVE", wind: "WIND", sst: "SST", vis: "VIS",
     hailing: "Hailing first landing centre…", unreachable: "Backend unreachable — is uvicorn running on port 8000?",
     hPort: "PORT", hSource: "SOURCE", hMode: "MODE", hLatency: "LATENCY", hAt: "TIME",
-    feedNote: "These readings feed the risk engine (wave/wind → safety score) and fishing model (SST/chlorophyll → fish probability).",
+    feedNote: "These readings feed the risk engine (wave/wind → safety score) and fishing model (SST/chlorophyll → environmental suitability).",
     outVerdict: "VERDICT", outVerdictD: "0–100 risk, every point attributed, floored by safety law, spoken in the fisher's language.",
     outPlan: "PLAN", outPlanD: "Ranked grounds with fish chance, best window, duration, and safest course.",
     outLedger: "LEDGER", outLedgerD: "Every value with source · timestamp · confidence · mode. CSV export for authority.",

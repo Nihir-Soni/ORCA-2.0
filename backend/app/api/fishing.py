@@ -54,24 +54,47 @@ def _safe_window_hours(loc: Location, start: datetime, gis_data: dict) -> float:
 
 def _zone_payload(loc: Location, zones: List[Dict], ambient_sst: Optional[float],
                   hour: int) -> List[Dict]:
-    """Score, filter and rank candidate grounds."""
+    """Score, filter and rank candidate grounds using ORCA Environmental Suitability.
+
+    Calls ``fishing.environmental_suitability()`` — which excludes unavailable
+    observations rather than substituting phantom defaults — to produce a
+    0..100 score or None when no environmental data is available.
+
+    The legacy ``probability`` key is preserved on each zone dict for backward
+    compatibility with ``recommend_duration`` and ``trip_economics`` callers.
+    Its value is derived from ``environmental_suitability`` (not from the old
+    ``fishing.probability()`` function), so no phantom ~44 value can appear.
+    """
     scored: List[Dict] = []
     for z in zones:
         blocker = _blocking_zone(z["latitude"], z["longitude"])
         if blocker:
             continue  # never recommend a ground inside a restricted area
-        result = fishing.probability(
-            chlorophyll=z.get("chlorophyll_mg_m3"), sst=z.get("sst_c"),
-            ambient_sst=ambient_sst, wave_m=z.get("wave_height_m"), hour=hour,
+
+        suit_result = fishing.environmental_suitability(
+            chlorophyll=z.get("chlorophyll_mg_m3"),
+            sst=z.get("sst_c"),
+            ambient_sst=ambient_sst,
+            wave_m=z.get("wave_height_m"),
+            hour=hour,
         )
+
         z = dict(z)
-        z["probability"] = result["probability"]
-        z["rating"] = fishing.rating(result["probability"])
-        z["factors"] = result["factors"]
+        suitability = suit_result["suitability"]  # int | None
+        data_available = suit_result["available"]  # bool
+
+        z["environmental_suitability"] = suitability
+        z["environmental_data_available"] = data_available
+        # probability: backward-compat field consumed by recommend_duration,
+        # trip_economics, and the 3-day forecast loop.  We derive it from the
+        # new suitability score so there is no path back to the phantom ~44.
+        z["probability"] = suitability if suitability is not None else 0
+        z["rating"] = fishing.rating(z["probability"])
+        z["factors"] = suit_result["factors"]
         z["likely_species"] = fishing.likely_species(
             z.get("sst_c"), z.get("chlorophyll_mg_m3"), z["distance_km"])
-        z["confidence"] = round(result["probability"] / 100.0, 2)
-        z["value_score"] = fishing.value_score(result["probability"], z["distance_km"])
+        z["confidence"] = round(z["probability"] / 100.0, 2)
+        z["value_score"] = fishing.value_score(z["probability"], z["distance_km"])
         if "rationale" in z and z["rationale"]:
             z["rationale"] = f"{z['rationale']}, {round(z['distance_km'])} km {z['bearing']}."
         else:
@@ -81,16 +104,19 @@ def _zone_payload(loc: Location, zones: List[Dict], ambient_sst: Optional[float]
             )
         scored.append(z)
 
-    # Numbering follows the chance of fish, so "area 1" always means "best
-    # chance" to the person reading it. Ranking them by trip value instead
-    # produced a list where area 1 showed a lower percentage than area 3, which
-    # simply reads as broken.
-    scored.sort(key=lambda z: (z["probability"], -z["distance_km"]), reverse=True)
+    # Rank by ORCA Environmental Suitability descending.
+    # Zones with no environmental data (suitability=None) sort last.
+    scored.sort(
+        key=lambda z: (
+            z["environmental_suitability"] if z["environmental_suitability"] is not None else -1,
+            -z["distance_km"],
+        ),
+        reverse=True,
+    )
     for rank, z in enumerate(scored, start=1):
         z["rank"] = rank
 
-    # Separately, the ground we actually send him to balances the odds against
-    # the run out. That one carries the badge and drives the route and timing.
+    # The *recommended* ground balances the suitability against the run-out.
     if scored:
         pick = max(scored, key=lambda z: z["value_score"])
         for z in scored:

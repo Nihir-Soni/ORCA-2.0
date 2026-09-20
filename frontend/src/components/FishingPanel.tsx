@@ -17,6 +17,8 @@ const RATING_WORD: Record<Language, Record<CatchRating, string>> = {
 const T: Record<Language, Record<string, string>> = {
   en: {
     advice: "ORCA RECOMMENDATION", areas: "Best fishing zones", within: "within", away: "away", chance: "chance",
+    suitability: "ORCA Environmental Suitability", suitabilityUnavailable: "Environmental data unavailable",
+    suitabilityTooltip: "ORCA's deterministic score based on available marine conditions and the official INCOIS PFZ advisory. It is not a probability of catching fish.",
     trip: "TRIP PLAN", stay: "Stay", travel: "Travel each way", total: "Round trip", hours: "h", min: "min",
     bestTime: "Best window", avoid: "AVOID THESE AREAS", closedNow: "active now", closedBetween: "closed",
     always: "always closed", forecast: "3-DAY FORECAST", today: "Today", tomorrow: "Tomorrow", dayAfter: "Day 3",
@@ -33,6 +35,8 @@ const T: Record<Language, Record<string, string>> = {
   },
   hi: {
     advice: "ORCA सुझाव", areas: "मछली पकड़ने की सबसे अच्छी जगहें", within: "के अंदर", away: "दूर", chance: "मछली की उम्मीद",
+    suitability: "ORCA पर्यावरणीय उपयुक्तता", suitabilityUnavailable: "पर्यावरणीय डेटा अनुपलब्ध",
+    suitabilityTooltip: "यह उपलब्ध समुद्री स्थितियों और आधिकारिक INCOIS PFZ सलाह पर आधारित ORCA का स्कोर है। यह मछली पकड़ने की संभावना नहीं है।",
     trip: "यात्रा योजना", stay: "वहाँ रुकें", travel: "एक तरफ़", total: "कुल यात्रा", hours: "घंटे", min: "मिनट",
     bestTime: "सबसे अच्छा समय", avoid: "इन जगहों से बचें", closedNow: "अभी सक्रिय", closedBetween: "बंद",
     always: "हमेशा बंद", forecast: "3 दिन का अनुमान", today: "आज", tomorrow: "कल", dayAfter: "परसों",
@@ -49,6 +53,8 @@ const T: Record<Language, Record<string, string>> = {
   },
   kn: {
     advice: "ORCA ಶಿಫಾರಸು", areas: "ಮೀನುಗಾರಿಕೆಗೆ ಉತ್ತಮ ಪ್ರದೇಶಗಳು", within: "ಒಳಗೆ", away: "ದೂರ", chance: "ಸಾಧ್ಯತೆ",
+    suitability: "ORCA ಪರಿಸರ ಸೂಕ್ತತೆ", suitabilityUnavailable: "ಪರಿಸರ ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ",
+    suitabilityTooltip: "ಲಭ್ಯವಿರುವ ಸಮುದ್ರ ಪರಿಸ್ಥಿತಿಗಳು ಮತ್ತು ಅಧಿಕೃತ INCOIS PFZ ಸಲಹೆಯ ಆಧಾರದ ಮೇಲೆ ಇದು ORCA ದ ಸ್ಕೋರ್ ಆಗಿದೆ. ಇದು ಮೀನು ಹಿಡಿಯುವ ಸಾಧ್ಯತೆಯಲ್ಲ.",
     trip: "ಪ್ರವಾಸ ಯೋಜನೆ", stay: "ಅಲ್ಲಿ ಇರಿ", travel: "ಒಂದು ದಿಕ್ಕು", total: "ಒಟ್ಟು", hours: "ಗಂಟೆ", min: "ನಿಮಿಷ",
     bestTime: "ಉತ್ತಮ ಸಮಯ", avoid: "ಈ ಪ್ರದೇಶಗಳಿಂದ ದೂರ ಇರಿ", closedNow: "ಈಗ ಸಕ್ರಿಯ", closedBetween: "ಮುಚ್ಚಲಾಗಿದೆ",
     always: "ಯಾವಾಗಲೂ ಮುಚ್ಚಲಾಗಿದೆ", forecast: "3 ದಿನದ ಮುನ್ಸೂಚನೆ", today: "ಇಂದು", tomorrow: "ನಾಳೆ", dayAfter: "ನಾಡಿದ್ದು",
@@ -237,7 +243,7 @@ export default function FishingPanel({
                       )}
                     </div>
                     <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 5 }}>
-                      {words[a.rating]} · {t.chance}
+                      {words[a.rating]}
                     </div>
                     {/* Factor bars */}
                     <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
@@ -262,15 +268,26 @@ export default function FishingPanel({
                     )}
                   </div>
 
-                  {/* Probability */}
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontFamily: "Spline Sans Mono Variable, Consolas, monospace", fontSize: 22, fontWeight: 900, color: rCol, lineHeight: 1 }}>
-                      {a.probability}
-                      <span style={{ fontSize: 12, fontWeight: 500 }}>%</span>
+                  {/* Suitability */}
+                  <div style={{ textAlign: "right", flexShrink: 0, maxWidth: 120 }} title={t.suitabilityTooltip}>
+                    <div style={{ fontSize: 9, color: "var(--text-dim)", marginBottom: 2, textTransform: "uppercase", lineHeight: 1.1 }}>
+                      {t.suitability}
                     </div>
-                    <div style={{ marginTop: 4, height: 3, width: 60, overflow: "hidden", background: "var(--surface-3)", borderRadius: 1 }}>
-                      <div className="grow-x" style={{ height: "100%", width: `${a.probability}%`, background: rCol }} />
-                    </div>
+                    {a.environmental_data_available ? (
+                      <>
+                        <div style={{ fontFamily: "Spline Sans Mono Variable, Consolas, monospace", fontSize: 22, fontWeight: 900, color: rCol, lineHeight: 1, marginTop: 4 }}>
+                          {a.environmental_suitability}
+                          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-faint)" }}> / 100</span>
+                        </div>
+                        <div style={{ marginTop: 4, height: 3, width: "100%", overflow: "hidden", background: "var(--surface-3)", borderRadius: 1 }}>
+                          <div className="grow-x" style={{ height: "100%", width: `${a.environmental_suitability}%`, background: rCol }} />
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontFamily: "Spline Sans Mono Variable, Consolas, monospace", fontSize: 10, fontWeight: 600, color: "var(--text-dim)", marginTop: 6, lineHeight: 1.2 }}>
+                        {t.suitabilityUnavailable}
+                      </div>
+                    )}
                   </div>
                 </button>
               );

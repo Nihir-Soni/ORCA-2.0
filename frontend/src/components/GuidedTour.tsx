@@ -76,13 +76,13 @@ export const TOUR: TourStep[] = [
       kn: "100 ಕಿಮೀ ಒಳಗೆ ಮೀನು ಎಲ್ಲಿವೆ",
     },
     say: {
-      en: "ORCA scores every ground within 100 kilometres for the chance of fish, and ranks them by what the trip is actually worth — a slightly better ground twice as far is usually the wrong advice.",
-      hi: "ORCA 100 किलोमीटर के हर इलाक़े को मछली मिलने की संभावना पर आँकता है, और यात्रा की असली क़ीमत से रैंक करता है — थोड़ी बेहतर पर दुगनी दूर जगह अक्सर ग़लत सलाह होती है।",
-      kn: "ORCA 100 ಕಿಲೋಮೀಟರ್ ಒಳಗಿನ ಪ್ರತಿಯೊಂದು ಪ್ರದೇಶಕ್ಕೆ ಮೀನು ಸಿಗುವ ಸಾಧ್ಯತೆಯ ಅಂಕ ನೀಡಿ, ಪ್ರವಾಸದ ನಿಜವಾದ ಮೌಲ್ಯದಿಂದ ಕ್ರಮಗೊಳಿಸುತ್ತದೆ — ಸ್ವಲ್ಪ ಉತ್ತಮವಾದರೂ ಎರಡು ಪಟ್ಟು ದೂರದ ಪ್ರದೇಶ ಸಾಮಾನ್ಯವಾಗಿ ತಪ್ಪು ಸಲಹೆ.",
+      en: "ORCA scores every ground within 100 kilometres for environmental suitability, and ranks them by what the trip is actually worth — a slightly better ground twice as far is usually the wrong advice.",
+      hi: "ORCA 100 किलोमीटर के हर इलाक़े को पर्यावरणीय उपयुक्तता पर आँकता है, और यात्रा की असली क़ीमत से रैंक करता है — थोड़ी बेहतर पर दुगनी दूर जगह अक्सर ग़लत सलाह होती है।",
+      kn: "ORCA 100 ಕಿಲೋಮೀಟರ್ ಒಳಗಿನ ಪ್ರತಿಯೊಂದು ಪ್ರದೇಶಕ್ಕೆ ಪರಿಸರ ಸೂಕ್ತತೆಯ ಅಂಕ ನೀಡಿ, ಪ್ರವಾಸದ ನಿಜವಾದ ಮೌಲ್ಯದಿಂದ ಕ್ರಮಗೊಳಿಸುತ್ತದೆ — ಸ್ವಲ್ಪ ಉತ್ತಮವಾದರೂ ಎರಡು ಪಟ್ಟು ದೂರದ ಪ್ರದೇಶ ಸಾಮಾನ್ಯವಾಗಿ ತಪ್ಪು ಸಲಹೆ.",
     },
     tab: "home",
     dwell: 10000,
-    feature: "Fishing probability",
+    feature: "Environmental suitability",
   },
   {
     title: {

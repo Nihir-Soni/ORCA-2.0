@@ -606,17 +606,17 @@ export default function MarineMap({
                        align-items:center;justify-content:center;line-height:1;gap:1px;
                        box-shadow:0 3px 10px rgba(18,33,45,.4);color:#12212D">
                        <span style="font:${best ? "800 16px" : "700 14px"} ${SERIF}">${a.rank}</span>
-                       <span style="font:600 ${best ? 8.5 : 8}px ${MONO};color:#42596D">${a.probability}%</span>
+                       <span style="font:600 ${best ? 8.5 : 8}px ${MONO};color:#42596D">${a.environmental_data_available ? a.environmental_suitability : "—"}</span>
                      </div>
                    </div>`,
           }),
         })
           .bindPopup(
-            `<b>Area ${a.rank}</b> — ${a.probability}% chance of fish<br/>
+            `<b>Area ${a.rank}</b> — ORCA Environmental Suitability: ${a.environmental_data_available ? a.environmental_suitability + " / 100" : "Unavailable"}<br/>
              ${Math.round(a.distance_km)} km ${a.bearing}<br/>
              SST ${a.sst_c ?? "—"} °C · chlorophyll ${a.chlorophyll_mg_m3 ?? "—"} mg/m³<br/>
              ${a.likely_species?.length ? `Likely: ${a.likely_species.join(", ")}<br/>` : ""}
-             <span style="font-size:10px;opacity:.65">A likelihood from the data — never a guarantee of fish.</span>`,
+             <span style="font-size:10px;opacity:.65">ORCA's deterministic score based on available marine conditions and the official INCOIS PFZ advisory. It is not a probability of catching fish.</span>`,
           )
           .addTo(group);
         bounds.push([a.latitude, a.longitude]);

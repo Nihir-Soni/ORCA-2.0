@@ -133,6 +133,10 @@ class PFZZone(BaseModel):
     rationale: str = ""
     source: str = "DEMO"
     timestamp: str = ""
+    # Per-variable provenance from LIVE environmental enrichment.
+    # Keys: "sst", "chlorophyll", "wave_height".
+    # Value: {value, provider, valid_time, stale} or None if unavailable.
+    environmental_inputs: Optional[Dict[str, Any]] = None
 
 
 class RouteLeg(BaseModel):

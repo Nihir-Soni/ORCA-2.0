@@ -62,7 +62,8 @@ def test_incois_geojson_parsing_and_shapely():
     
     # Process mock geojson
     lat, lon = 15.64, 72.88
-    res = provider._process_geojson(MOCK_INCOIS_GEOJSON, lat, lon)
+    from datetime import datetime, timezone
+    res = provider._process_geojson(MOCK_INCOIS_GEOJSON, lat, lon, when=datetime.now(timezone.utc))
     
     assert res is not None
     assert "zones" in res.data

@@ -113,6 +113,74 @@ def probability(*, chlorophyll: Optional[float], sst: Optional[float],
     }
 
 
+def environmental_suitability(
+    *,
+    chlorophyll: Optional[float],
+    sst: Optional[float],
+    ambient_sst: Optional[float],
+    wave_m: Optional[float],
+    hour: int,
+) -> Dict:
+    """ORCA Environmental Suitability — 0..100 int, or None when no observation is available.
+
+    Differs critically from probability():
+    - Each factor is only included when its underlying observation is non-None.
+    - No default/phantom values are substituted for missing observations.
+    - Weights are renormalized over whichever factors are computable.
+    - ``front`` requires BOTH zone_sst AND ambient_sst; if either is None the
+      front factor is excluded entirely.
+    - ``time_of_day`` is always computable (wall clock) but is only included
+      when at least one environmental observation (chl, sst, or wave) is present.
+      A score driven solely by the clock would be misleading.
+    - Returns ``suitability: None`` when no environmental observation is available.
+
+    This score is ORCA's deterministic heuristic based on available marine data
+    and the official INCOIS PFZ advisory.  It is NOT a calibrated probability of
+    catching fish.
+    """
+    available: Dict[str, float] = {}
+    env_obs_present = False  # at least one of: chl, sst, wave
+
+    if chlorophyll is not None:
+        available["chlorophyll"] = _curve(chlorophyll, CHL_CURVE)
+        env_obs_present = True
+
+    if sst is not None:
+        available["sst"] = _sst_factor(sst)
+        env_obs_present = True
+
+    # front requires BOTH zone SST and ambient SST — neither may be substituted.
+    if sst is not None and ambient_sst is not None:
+        available["front"] = _front_factor(sst, ambient_sst)
+    # else: front is excluded, not defaulted.
+
+    if wave_m is not None:
+        available["sea_state"] = _sea_state_factor(wave_m)
+        env_obs_present = True
+
+    # time_of_day is always computable but only meaningful alongside real env data.
+    if env_obs_present:
+        available["time_of_day"] = time_of_day_factor(hour)
+
+    if not env_obs_present:
+        # No environmental observation — score is undefined, not ~44.
+        return {
+            "suitability": None,
+            "factors": {},
+            "weights_used": {},
+            "available": False,
+        }
+
+    total_weight = sum(WEIGHTS[k] for k in available)
+    score = sum(WEIGHTS[k] * v for k, v in available.items()) / total_weight
+    return {
+        "suitability": round(min(100.0, max(0.0, score * 100))),
+        "factors": {k: round(v, 3) for k, v in available.items()},
+        "weights_used": {k: WEIGHTS[k] for k in available},
+        "available": True,
+    }
+
+
 # --- indicative species mix ----------------------------------------------
 # Coastal target species concentrate in documented SST/chlorophyll bands —
 # the same reasoning INCOIS applies, species-resolved. This is an INDICATIVE

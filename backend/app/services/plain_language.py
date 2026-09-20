@@ -121,14 +121,14 @@ GO_LINE = {
 }
 
 CATCH_WORD = {
-    "very_good": {"en": "very good chance of fish", "hi": "मछली मिलने की बहुत अच्छी उम्मीद",
-                  "kn": "ಮೀನು ಸಿಗುವ ಉತ್ತಮ ಸಾಧ್ಯತೆ"},
-    "good": {"en": "good chance of fish", "hi": "मछली मिलने की अच्छी उम्मीद",
-             "kn": "ಮೀನು ಸಿಗುವ ಒಳ್ಳೆಯ ಸಾಧ್ಯತೆ"},
-    "fair": {"en": "some chance of fish", "hi": "मछली मिलने की कुछ उम्मीद",
-             "kn": "ಮೀನು ಸಿಗುವ ಸ್ವಲ್ಪ ಸಾಧ್ಯತೆ"},
-    "poor": {"en": "low chance of fish", "hi": "मछली मिलने की कम उम्मीद",
-             "kn": "ಮೀನು ಸಿಗುವ ಕಡಿಮೆ ಸಾಧ್ಯತೆ"},
+    "very_good": {"en": "very favorable environmental conditions", "hi": "बहुत अनुकूल पर्यावरणीय परिस्थितियाँ",
+                  "kn": "ಅತ್ಯಂತ ಅನುಕೂಲಕರ ಪರಿಸರ ಪರಿಸ್ಥಿತಿಗಳು"},
+    "good": {"en": "favorable environmental conditions", "hi": "अनुकूल पर्यावरणीय परिस्थितियाँ",
+             "kn": "ಅನುಕೂಲಕರ ಪರಿಸರ ಪರಿಸ್ಥಿತಿಗಳು"},
+    "fair": {"en": "moderate environmental conditions", "hi": "मध्यम पर्यावरणीय परिस्थितियाँ",
+             "kn": "ಸಾಧಾರಣ ಪರಿಸರ ಪರಿಸ್ಥಿತಿಗಳು"},
+    "poor": {"en": "poor environmental conditions", "hi": "प्रतिकूल पर्यावरणीय परिस्थितियाँ",
+             "kn": "ಕಳಪೆ ಪರಿಸರ ಪರಿಸ್ಥಿತಿಗಳು"},
 }
 
 
