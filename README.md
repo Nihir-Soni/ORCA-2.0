@@ -115,7 +115,7 @@ not claim that a message was delivered.
 |---|---|
 | `/` | The landing page |
 | `/?tour=1` | The 17-step self-narrating guided tour |
-| `/?tab=home\|ask\|authority\|system` | A specific view, skipping the landing |
+| `/?tab=home\|ask\|historical\|authority\|system` | A specific view, skipping the landing |
 | `/?at=21.675,72.18` | Today view pinned to a position (skips GPS) |
 | `/?demo=safe` | Goa — calm seas, **LOW 9/100** |
 | `/?demo=danger` | Mumbai — asked in Kannada, **HIGH 70/100**, IMD warning, clears after 11:00 |
@@ -147,6 +147,11 @@ in, and the four-phase decision pipeline. Every deep link skips it.
 - **Three-day outlook** — each day scored at its own best hour
 - **Areas to stay out of**, with the hours they are closed
 
+### Historical Marine Intelligence (`/?tab=historical`)
+- **30-day interactive trends** for sea-surface temperature, chlorophyll, and wave heights
+- **Nearest-neighbour fallback** for coastal chlorophyll cache misses ensures data continuity
+- **LLM-grounded analysis** for productivity and fishing season trends, routed separately from the risk engine
+
 ### Ask ORCA — the conversational view
 - Ask in **English, Hindi or Kannada**, typing or speaking (browser Web Speech API — no key)
 - Language is **auto-detected**; spoken answers come back in the same language
@@ -157,6 +162,7 @@ in, and the four-phase decision pipeline. Every deep link skips it.
 - **Context is kept** — *"what about 12 PM?"* re-checks only what changed
 - **Agent crew panel** — the real execution trace, grouped by phase, with measured
   latencies and the parallel fan-out made visible
+- **Graceful AI fallback** — fails cleanly to a standard response if the LLM provider is unreachable
 
 ### The chart (both views)
 A drafted nautical chart, alive: tick-marked neatline, compass rose, **hatched
@@ -218,7 +224,7 @@ flowchart LR
     EX --> OUT3["A ledger\nsource · time · mode"]
 ```
 
-Ten agents: `intent · planner · weather · ocean · pfz · cyclone · gis · risk · route · explanation` —
+Eleven agents: `intent · planner · historical · weather · ocean · pfz · cyclone · gis · risk · route · explanation` —
 independent specialists run concurrently via a `ThreadPoolExecutor` fan-out in
 `agents/planner.py`. The risk engine waits for all of them; no agent's opinion can skip it.
 
@@ -378,6 +384,7 @@ claiming the weights are settled science.
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/fishing?lat&lon&radius_km&days&lang` | **everything for a position** — safety, grounds + species, timing, trip length, 3-day outlook, plain-language advice |
+| `GET /api/historical/analysis?lat&lon` | 30-day time-series data for SST, chlorophyll, and waves with LLM-grounded trend analysis |
 | `POST /api/chat` | the full agent pipeline for one question |
 | `GET /api/forecast?lat&lon&when` | raw weather + ocean readings with provenance (drives the System live feed) |
 | `GET /api/risk?lat&lon&when` | risk assessment with inputs |
@@ -435,7 +442,7 @@ better than a dark dashboard on a hackathon projector.
 - **Chart paper & marine ink** — warm paper, hairline rules, graticule, aged
   edges, bathymetric-contour and compass-rose watermarks; the sea itself rises at
   the foot of every page as three drifting swell layers with schools of fish
-  crossing upstream.
+  crossing upstream, alongside a 3D looping wooden boat animation on the OceanCanvas.
 - **Type with a spine** — Fraunces (display serif) for verdicts, headings and
   buoy numbers; Archivo for body; Spline Sans Mono for instrument readouts; Noto
   Serif Devanagari keeps Hindi readable alongside Kannada. All self-hosted —
