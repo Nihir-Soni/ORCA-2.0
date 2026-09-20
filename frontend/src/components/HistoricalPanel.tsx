@@ -365,6 +365,11 @@ export default function HistoricalPanel({
   const availability = data?.availability?.[variable];
   const isAvailable = availability?.status === "AVAILABLE";
 
+  const hasAnyData = useMemo(() => {
+    if (!data?.availability) return false;
+    return Object.values(data.availability).some((v: any) => v.status === "AVAILABLE");
+  }, [data]);
+
   // Build chart data from backend parallel arrays — no interpolation
   const chartPoints = useMemo(() => {
     if (!varData?.timeseries) return [];
@@ -673,7 +678,23 @@ export default function HistoricalPanel({
       )}
 
       {/* ── Main content (data loaded) ── */}
-      {place && !loading && !error && data && (
+      {place && !loading && !error && data && !hasAnyData && (
+        <div
+          style={{
+            padding: "32px 20px",
+            textAlign: "center",
+            color: "var(--text-dim)",
+            fontFamily: "Spline Sans Mono Variable, Consolas, monospace",
+            fontSize: 13,
+            border: "1px dashed var(--border)",
+            borderRadius: 6,
+          }}
+        >
+          {l.unavailable}
+        </div>
+      )}
+
+      {place && !loading && !error && data && hasAnyData && (
         <>
           {/* ── Time-series chart or weather panel ── */}
           <div
