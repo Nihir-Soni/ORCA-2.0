@@ -28,7 +28,8 @@ const T: Record<Language, Record<string, string>> = {
     pfzTitle: "PFZ INTELLIGENCE", pfzSub: "Potential Fishing Zones",
     noNearby: "No INCOIS PFZ advisory within",
     nearestIs: "Nearest INCOIS PFZ advisory is approximately",
-    kmAway: "km away."
+    kmAway: "km away.",
+    atLandWarning: "You are currently at land, please choose a harbour or drag the boat icon to a location."
   },
   hi: {
     advice: "ORCA सुझाव", areas: "मछली पकड़ने की सबसे अच्छी जगहें", within: "के अंदर", away: "दूर", chance: "मछली की उम्मीद",
@@ -43,7 +44,8 @@ const T: Record<Language, Record<string, string>> = {
     pfzTitle: "PFZ बुद्धिमत्ता", pfzSub: "संभावित मत्स्य क्षेत्र",
     noNearby: "इसके भीतर कोई INCOIS PFZ सलाह नहीं",
     nearestIs: "निकटतम INCOIS PFZ सलाह लगभग",
-    kmAway: "किमी दूर है।"
+    kmAway: "किमी दूर है।",
+    atLandWarning: "आप वर्तमान में ज़मीन पर हैं, कृपया एक बंदरगाह चुनें या नाव के आइकन को किसी स्थान पर खींचें।"
   },
   kn: {
     advice: "ORCA ಶಿಫಾರಸು", areas: "ಮೀನುಗಾರಿಕೆಗೆ ಉತ್ತಮ ಪ್ರದೇಶಗಳು", within: "ಒಳಗೆ", away: "ದೂರ", chance: "ಸಾಧ್ಯತೆ",
@@ -58,7 +60,8 @@ const T: Record<Language, Record<string, string>> = {
     pfzTitle: "PFZ ಬುದ್ಧಿಮತ್ತೆ", pfzSub: "ಸಂಭಾವ್ಯ ಮೀನುಗಾರಿಕೆ ಪ್ರದೇಶಗಳು",
     noNearby: "ಇದರ ಒಳಗೆ INCOIS PFZ ಸಲಹೆ ಇಲ್ಲ",
     nearestIs: "ಹತ್ತಿರದ INCOIS PFZ ಸಲಹೆಯು ಸುಮಾರು",
-    kmAway: "ಕಿಮೀ ದೂರದಲ್ಲಿದೆ."
+    kmAway: "ಕಿಮೀ ದೂರದಲ್ಲಿದೆ.",
+    atLandWarning: "ನೀವು ಪ್ರಸ್ತುತ ಭೂಮಿಯಲ್ಲಿದ್ದೀರಿ, ದಯವಿಟ್ಟು ಬಂದರನ್ನು ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ದೋಣಿ ಐಕಾನ್ ಅನ್ನು ಬೇರೆ ಸ್ಥಳಕ್ಕೆ ಎಳೆಯಿರಿ."
   },
 };
 
@@ -93,15 +96,18 @@ const SEC_LABEL: React.CSSProperties = {
 export default function FishingPanel({
   data,
   language = "en",
+  isPortSelected = false,
   onSelectArea,
 }: {
   data: FishingOutlook;
   language?: Language;
+  isPortSelected?: boolean;
   onSelectArea?: (rank: number) => void;
 }) {
   const t = T[language] ?? T.en;
   const words = RATING_WORD[language] ?? RATING_WORD.en;
   const top = data.areas.slice(0, 3);
+  const showLandWarning = data.location.is_on_land && !isPortSelected;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -114,17 +120,29 @@ export default function FishingPanel({
           </div>
         </div>
         <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-          {data.advice.map((line, i) =>
-            i === 0 ? (
-              <p key={i} style={{ fontFamily: "'Fraunces Variable', Georgia, serif", fontSize: 16, fontWeight: 700, color: "var(--text-bright)", lineHeight: 1.4 }}>
-                {line}
-              </p>
-            ) : (
-              <p key={i} style={{ display: "flex", gap: 8, fontSize: 12, lineHeight: 1.6, color: "var(--text-mid)" }}>
-                <span style={{ marginTop: 6, width: 5, height: 5, flexShrink: 0, background: "var(--ocean)", transform: "rotate(45deg)", display: "inline-block" }} />
-                <span>{line}</span>
-              </p>
+          {!(showLandWarning && data.location.distance_from_shore_km > 100) && (
+            data.advice.map((line, i) =>
+              i === 0 ? (
+                <p key={i} style={{ fontFamily: "'Fraunces Variable', Georgia, serif", fontSize: 16, fontWeight: 700, color: "var(--text-bright)", lineHeight: 1.4 }}>
+                  {line}
+                </p>
+              ) : (
+                <p key={i} style={{ display: "flex", gap: 8, fontSize: 12, lineHeight: 1.6, color: "var(--text-mid)" }}>
+                  <span style={{ marginTop: 6, width: 5, height: 5, flexShrink: 0, background: "var(--ocean)", transform: "rotate(45deg)", display: "inline-block" }} />
+                  <span>{line}</span>
+                </p>
+              )
             )
+          )}
+          {showLandWarning && (
+            <div style={{ marginTop: data.location.distance_from_shore_km > 100 ? 0 : 8, padding: "8px 12px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 4, display: "flex", gap: 8, alignItems: "center", color: "var(--risk-high)" }}>
+              <div style={{ flexShrink: 0, display: "flex" }}>
+                <WarnGlyph size={14} />
+              </div>
+              <p style={{ fontSize: 12, lineHeight: 1.4, color: "var(--risk-high)", fontWeight: 500, margin: 0 }}>
+                {t.atLandWarning}
+              </p>
+            </div>
           )}
         </div>
       </div>

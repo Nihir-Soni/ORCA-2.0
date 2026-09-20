@@ -741,7 +741,7 @@ export default function App() {
 
             {/* Right sidebar: intelligence */}
             <div className="hidden w-80 shrink-0 flex-col gap-3 overflow-y-auto lg:flex" style={{ maxHeight: "calc(100vh - 120px)" }}>
-              {outlook && <FishingPanel data={outlook} language={language} onSelectArea={(rank) => setFocusRank(rank)} />}
+              {outlook && <FishingPanel data={outlook} language={language} isPortSelected={place?.source === "port" || place?.source === "default"} onSelectArea={(rank) => setFocusRank(rank)} />}
             </div>
           </div>
         )}
