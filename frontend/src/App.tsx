@@ -336,7 +336,7 @@ export default function App() {
   const riskCat = outlook?.safety.category;
 
   return (
-    <div className="flex min-h-full flex-col" style={{ background: "var(--bg)" }}>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
       <ChartDefs />
       <div className="fish-drift" aria-hidden />
 
@@ -750,9 +750,9 @@ export default function App() {
         {tab === "ask" && (
           <>
             <div className="grid min-h-0 flex-1 gap-4 p-3 sm:p-4 grid-cols-1 lg:grid-cols-[minmax(340px,1fr)_1.6fr] lg:grid-rows-1 lg:overflow-hidden">
-              <div className="flex flex-col gap-3 h-[500px] lg:h-full lg:min-h-0">
+              <div className="flex flex-col gap-3 h-[500px] min-h-0 overflow-hidden lg:h-full">
                 <LocationPicker current={place} language={language} onPick={setPlace} />
-                <div className="flex-1 min-h-0 flex flex-col">
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <ChatPanel
                     messages={messages}
                     busy={busy}
@@ -766,7 +766,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className={`flex flex-col min-h-[450px] lg:min-h-0 gap-3 ${latest ? "lg:overflow-y-auto" : ""}`}>
+              <div className={`flex flex-col min-h-[450px] lg:min-h-0 gap-3 [&>*]:shrink-0 ${latest ? "lg:overflow-y-auto" : ""}`}>
                 {latest && <ConditionsStrip res={latest} language={latest.language} />}
 
                 <MarineMap
