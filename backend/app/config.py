@@ -45,7 +45,7 @@ WEATHER_HAZARD_GRID_TIMEOUT_SECONDS = float(os.getenv("ORCA_WEATHER_HAZARD_GRID_
 # Optional AI intent layer. The key is read only by the backend and is never
 # included in a response or sent by the frontend.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("ORCA_GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("ORCA_GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_TIMEOUT_SECONDS = float(os.getenv("ORCA_GROQ_TIMEOUT", "8.0"))
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 NVIDIA_MODEL = os.getenv("NVIDIA_MODEL") or "meta/llama2-70b"
