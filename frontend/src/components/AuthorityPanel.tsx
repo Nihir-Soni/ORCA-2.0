@@ -135,7 +135,7 @@ export default function AuthorityPanel({ language = "en" }: { language?: Languag
   const alertRows = data.locations.filter(r => r.risk_category === "EXTREME" || r.risk_category === "HIGH" || r.official_warning);
 
   return (
-    <div style={{ flex: 1, padding: 16, display: "flex", flexDirection: "column", gap: 14, overflow: "hidden" }}>
+    <div style={{ flex: 1, padding: 16, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
 
       {/* ---- PAGE HEADER ---- */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>

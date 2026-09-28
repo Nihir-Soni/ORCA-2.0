@@ -14,8 +14,9 @@ points = [
 
 resp = incois_provider.fetch_pfz_zones(0, 0, datetime.now())
 for lat, lon in points:
-    pt_resp = incois_provider._process_geojson(incois_provider._cache["pfz_wfs"][0], lat, lon)
+    pt_resp = incois_provider._process_geojson(incois_provider._cache["pfz_wfs"][0], lat, lon, datetime.now())
     if pt_resp.data["zones"]:
+
         nearest = pt_resp.data["zones"][0]
         print(f"{lat},{lon} -> {nearest['distance_km']}km, {nearest['rationale']}")
     else:

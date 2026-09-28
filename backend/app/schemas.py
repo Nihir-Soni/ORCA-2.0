@@ -16,6 +16,13 @@ DataMode = Literal["LIVE", "DEMO", "CACHE", "UNAVAILABLE", "PARTIAL_LIVE", "STAT
 IntentCategory = Literal["fishing_safety", "find_pfz", "fishing_outlook", "route", "emergency", "weather", "marine_conditions", "alerts", "restricted", "general_query", "historical_analysis"]
 RiskCategory = Literal["LOW", "MODERATE", "HIGH", "EXTREME"]
 
+class StructuredResponse(BaseModel):
+    type: Literal["fishing_zones", "hazards", "routes", "weather", "historical", "none"] = "none"
+    title: str = ""
+    columns: List[str] = Field(default_factory=list)
+    rows: List[List[Any]] = Field(default_factory=list)
+    source: str = ""
+
 
 class Provenance(BaseModel):
     """Attached to every factual number ORCA shows a user."""
@@ -232,3 +239,4 @@ class ChatResponse(BaseModel):
     sources: Dict[str, str] = Field(default_factory=dict)
     disclaimer: str = ""
     elapsed_ms: int = 0
+    structured: Optional[StructuredResponse] = None

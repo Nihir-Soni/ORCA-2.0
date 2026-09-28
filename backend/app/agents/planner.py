@@ -235,6 +235,7 @@ def handle(req: ChatRequest) -> ChatResponse:
         sources=source_map,
         disclaimer=expl_res.data.get("disclaimer", ""),
         elapsed_ms=int((time.perf_counter() - started) * 1000),
+        structured=expl_res.data.get("structured"),
     )
 
 

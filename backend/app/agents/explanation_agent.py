@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 
 from ..config import SOURCE_LABELS
 from ..schemas import (AgentResult, Evidence, Language, Location, PFZZone,
-                       RiskAssessment, RouteOption)
+                       RiskAssessment, RouteOption, StructuredResponse)
 from ..services.i18n import SUGGESTIONS, humanise_duration, t, verdict_key
 from .base import timed
 
@@ -136,6 +136,131 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
         mode: str, when: datetime, chat_mode: str = "OFFLINE", historical: Optional[Dict[str, Any]] = None) -> AgentResult:
     lang: Language = intent.language
     parts: List[str] = []
+    structured: Optional[StructuredResponse] = None
+
+    if getattr(intent, "intent", None) == "historical_analysis" and historical:
+        vars_ = historical.get("variables", {})
+        avail = historical.get("availability", {})
+        prov = historical.get("provenance", [{}])
+        provider = prov[0].get("provider", "Copernicus/Open-Meteo") if prov else "Copernicus/Open-Meteo"
+        
+        rows = []
+        for var_id, label, unit in [("chlorophyll", "Chlorophyll", "mg/m³"), ("sst", "SST", "°C"), ("current_speed", "Current speed", "m/s")]:
+            if avail.get(var_id, {}).get("status") == "AVAILABLE" and var_id in vars_:
+                s = vars_[var_id].get("statistics", {})
+                chg = s.get("change_percent")
+                chg_str = f"{chg:+.1f}%" if chg is not None else None
+                rows.append([label, s.get("first"), s.get("last"), chg_str, s.get("trend", "stable"), provider])
+        if rows:
+            structured = StructuredResponse(
+                type="historical",
+                title=f"Historical Trends ({historical.get('period', {}).get('start')} to {historical.get('period', {}).get('end')})",
+                columns=["Variable", "Start", "End", "Change", "Trend", "Source"],
+                rows=rows,
+                source=f"Source: {provider}"
+            )
+            
+    elif intent.intent in ("find_pfz", "route") and pfz and len(pfz) > 1:
+        has_suitability = any(z.environmental_inputs and "suitability" in z.environmental_inputs for z in pfz)
+        columns = ["Rank", "Distance", "Direction", "Latitude", "Longitude", "SST", "Chlorophyll", "Wave"]
+        if has_suitability:
+            columns.append("Suitability")
+            
+        rows = []
+        for z in pfz:
+            row = [
+                z.rank,
+                f"{z.distance_km} km" if z.distance_km is not None else None,
+                z.bearing,
+                f"{z.latitude:.4f}",
+                f"{z.longitude:.4f}",
+                f"{z.sst_c:.1f}°C" if z.sst_c is not None else None,
+                f"{z.chlorophyll_mg_m3:.2f} mg/m³" if z.chlorophyll_mg_m3 is not None else None,
+                f"{z.wave_height_m:.2f} m" if z.wave_height_m is not None else None
+            ]
+            if has_suitability:
+                suit = z.environmental_inputs.get("suitability") if z.environmental_inputs else None
+                row.append(f"{suit} / 100" if suit is not None else None)
+            rows.append(row)
+            
+        source_str = "INCOIS PFZ advisory + ORCA environmental observations" if any(z.environmental_inputs for z in pfz) else "ORCA candidate data"
+        structured = StructuredResponse(
+            type="fishing_zones",
+            title="Nearby Fishing Zones",
+            columns=columns,
+            rows=rows,
+            source=f"Source: {source_str}"
+        )
+
+    elif intent.intent in ("alerts", "emergency", "weather", "marine_conditions", "fishing_safety"):
+        # Hazards combined table
+        hazard_rows = []
+        for alert in geofence:
+            hazard_rows.append([
+                alert.zone_name,
+                alert.severity.upper(),
+                f"{alert.distance_km:.1f} km",
+                "N/A",
+                "ORCA Geofence"
+            ])
+        
+        alerts_list = cyclone.get("alerts", []) if isinstance(cyclone, dict) else []
+        for a in alerts_list:
+            hazard_rows.append([
+                a.get("headline") or a.get("type", "Alert"),
+                str(a.get("severity", "")).upper(),
+                a.get("location", "Regional"),
+                a.get("valid_till", "Unknown"),
+                a.get("source", "IMD")
+            ])
+            
+        if len(hazard_rows) > 1:
+            structured = StructuredResponse(
+                type="hazards",
+                title="Marine Hazards & Alerts",
+                columns=["Hazard", "Severity", "Location", "Valid Until", "Source"],
+                rows=hazard_rows,
+                source="Source: Integrated Alerts"
+            )
+        elif weather and ocean and not routes and not pfz:
+            # Weather compact key-value
+            w_rows = []
+            if weather.get("wind_speed_kmh") is not None:
+                w_rows.append(["Wind", f"{weather['wind_speed_kmh']:.0f} km/h {weather.get('wind_direction', '')}".strip()])
+            if ocean.get("wave_height_m") is not None:
+                w_rows.append(["Wave height", f"{ocean['wave_height_m']:.1f} m"])
+            if ocean.get("sst_c") is not None:
+                w_rows.append(["SST", f"{ocean['sst_c']:.1f}°C"])
+            if weather.get("visibility_km") is not None:
+                w_rows.append(["Visibility", f"{weather['visibility_km']:.1f} km"])
+                
+            if len(w_rows) > 1:
+                structured = StructuredResponse(
+                    type="weather",
+                    title="Marine Conditions",
+                    columns=["Condition", "Value"],
+                    rows=w_rows,
+                    source="Source: Open-Meteo Marine / Copernicus Marine"
+                )
+
+    if routes and len(routes) > 1 and not (structured and structured.type == "fishing_zones"):
+        r_rows = []
+        for r in routes:
+            r_rows.append([
+                r.name,
+                f"{r.distance_km:.1f} km",
+                r.risk_category,
+                humanise_duration(r.eta_minutes, lang),
+                "Recommended" if r.recommended else "Alternate"
+            ])
+        structured = StructuredResponse(
+            type="routes",
+            title="Available Routes",
+            columns=["Route", "Distance", "Risk", "Estimated Time", "Status"],
+            rows=r_rows,
+            source="Source: ORCA Routing Engine"
+        )
+
 
     # ── Historical-analysis path ───────────────────────────────────────────
     # When the intent is a trend/history query, skip the safety verdict entirely.
@@ -280,8 +405,10 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
             "cyclone": cyclone,
             "gis": gis,
             "historical": historical,
-            "sources": srcs
+            "sources": srcs,
+            "has_structured_table": structured.type if structured else None
         }
+
         ai_answer = groq_intent.generate_explanation(context_data, lang)
         if ai_answer:
             answer = ai_answer
@@ -301,4 +428,11 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
         confidence=0.9,
         mode=mode,  # type: ignore[arg-type]
     )
+    if structured:
+        res.data["structured"] = structured.model_dump()
+        # Remove the dense pfz prose if we have a table
+        if structured.type == "fishing_zones" and not chat_mode == "AI":
+            res.data["answer"] = " ".join([p for p in parts if not p.startswith("Found") and not p.startswith("The source is")])
+    return res
+
 

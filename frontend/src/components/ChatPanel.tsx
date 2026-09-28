@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChatMessage, IntentMode, Language } from "../types";
 import { CourseArrow, MicGlyph, StopGlyph } from "./glyphs";
+import StructuredResponseTable from "./StructuredResponseTable";
 
 const PLACEHOLDER: Record<Language, string> = {
   en: "Ask about safety, fishing zones, routes, weather…",
@@ -325,9 +326,13 @@ export default function ChatPanel({
                   </span>
                 </div>
               )}
+              {m.role === "orca" && m.response?.structured && (
+                <StructuredResponseTable structured={m.response.structured} />
+              )}
             </div>
           </div>
         ))}
+
 
         {/* Busy indicator — signal dots */}
         {busy && (

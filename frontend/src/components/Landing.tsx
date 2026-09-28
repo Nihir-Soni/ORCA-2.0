@@ -169,7 +169,7 @@ export default function Landing({
         position: "fixed",
         inset: 0,
         background: "var(--bg)",
-        overflow: "auto",
+        overflowY: "auto",
         display: "flex",
         flexDirection: "column",
       }}
@@ -191,7 +191,7 @@ export default function Landing({
       />
 
       {/* Content */}
-      <div style={{ position: "relative", zIndex: 2, flex: 1, display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "relative", zIndex: 2, minHeight: "100%", display: "flex", flexDirection: "column" }}>
 
         {/* ---- TOP BAR ---- */}
         <div style={{

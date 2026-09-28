@@ -169,9 +169,11 @@ def generate_explanation(context_data: Dict[str, Any], language: str) -> str:
         "and easy to read aloud. Write exactly 1 or 2 short paragraphs.\n"
         "6. ONLY answer the user's specific question (found in Context Data -> intent -> raw_query). "
         "Do NOT summarize extra risk or weather data unless it is directly relevant "
-        "or there is an extreme, imminent danger.\n\n"
+        "or there is an extreme, imminent danger.\n"
+        "7. If Context Data indicates 'has_structured_table' is not null, do NOT list out individual entities (e.g., fishing zones, routes, hazards) as they will be displayed in a structured table. Just give a brief introductory sentence.\n\n"
         f"Context Data:\n{json.dumps(context_data, indent=2, default=str)}"
     )
+
     
     try:
         response, provider = _post_with_fallback({

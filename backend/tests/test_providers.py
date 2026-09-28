@@ -251,6 +251,8 @@ def test_copernicus_no_heavy_imports():
 @patch('httpx.Client.get')
 def test_incois_unavailable(mock_get):
     """Test INCOIS returns None by default due to no API."""
+    incois_provider._cache = {}
+    incois_provider._cache_time = {}
     mock_get.side_effect = Exception("Connection refused")
     res = incois_provider.fetch_pfz_zones(19.0, 72.8, datetime.now())
     assert res is None

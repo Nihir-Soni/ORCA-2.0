@@ -124,6 +124,14 @@ export interface MarineAlert {
   };
 }
 
+export interface StructuredResponse {
+  type: "fishing_zones" | "hazards" | "routes" | "weather" | "historical" | "none";
+  title?: string;
+  columns?: string[];
+  rows?: (string | number | null)[][];
+  source?: string;
+}
+
 export interface ChatResponse {
   session_id: string;
   language: Language;
@@ -141,6 +149,7 @@ export interface ChatResponse {
   disclaimer: string;
   elapsed_ms: number;
   sources: Record<string, string>;
+  structured?: StructuredResponse;
 }
 
 export interface AuthorityRow {
