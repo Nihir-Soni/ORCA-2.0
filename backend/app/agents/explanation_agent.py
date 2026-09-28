@@ -413,26 +413,24 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
         if ai_answer:
             answer = ai_answer
 
+    res_data = {
+        "answer": answer,
+        "evidence": [e.model_dump() for e in build_evidence(weather, ocean, cyclone, gis, agents)],
+        "suggestions": SUGGESTIONS.get(lang, SUGGESTIONS["en"]),
+        "disclaimer": t("disclaimer", lang),
+    }
+
+    if structured:
+        res_data["structured"] = structured.model_dump()
+
     return AgentResult(
         agent="explanation",
         ok=True,
-        data={
-            "answer": answer,
-
-            "evidence": [e.model_dump() for e in build_evidence(weather, ocean, cyclone, gis, agents)],
-            "suggestions": SUGGESTIONS.get(lang, SUGGESTIONS["en"]),
-            "disclaimer": t("disclaimer", lang),
-        },
+        data=res_data,
         source="ORCA",
         timestamp=when.isoformat(timespec="seconds"),
         confidence=0.9,
         mode=mode,  # type: ignore[arg-type]
     )
-    if structured:
-        res.data["structured"] = structured.model_dump()
-        # Remove the dense pfz prose if we have a table
-        if structured.type == "fishing_zones" and not chat_mode == "AI":
-            res.data["answer"] = " ".join([p for p in parts if not p.startswith("Found") and not p.startswith("The source is")])
-    return res
 
 
