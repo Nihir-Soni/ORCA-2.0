@@ -74,6 +74,27 @@ const TAB_ICON: Record<AppTab, string> = {
   system: "◧",
 };
 
+const DEFAULT_SUGGESTIONS: Record<Language, string[]> = {
+  en: [
+    "What about 12 PM?",
+    "Show nearby fishing zones",
+    "Give me the safest route",
+    "Is there a cyclone nearby?",
+  ],
+  hi: [
+    "दोपहर 12 बजे कैसा रहेगा?",
+    "पास के मत्स्य क्षेत्र दिखाओ",
+    "सबसे सुरक्षित रास्ता बताओ",
+    "क्या आसपास कोई चक्रवात है?",
+  ],
+  kn: [
+    "ಮಧ್ಯಾಹ್ನ 12 ಗಂಟೆಗೆ ಪರಿಸ್ಥಿತಿ ಹೇಗಿರುತ್ತದೆ?",
+    "ಹತ್ತಿರದ ಮೀನುಗಾರಿಕೆ ಪ್ರದೇಶಗಳನ್ನು ತೋರಿಸಿ",
+    "ಅತ್ಯಂತ ಸುರಕ್ಷಿತ ಮಾರ್ಗ ನೀಡಿ",
+    "ಹತ್ತಿರ ಚಂಡಮಾರುತ ಇದೆಯೇ?",
+  ],
+};
+
 const UI: Record<Language, Record<string, string>> = {
   en: {
     voice: "Voice",
@@ -307,7 +328,12 @@ export default function App() {
     setPlace({ latitude: lat, longitude: lon, label: "Selected point", source: "map" });
   }, []);
 
-  const suggestions = useMemo(() => latest?.suggestions ?? [], [latest]);
+  const suggestions = useMemo(
+    () => (latest?.suggestions && latest.suggestions.length > 0)
+      ? latest.suggestions
+      : (DEFAULT_SUGGESTIONS[language] ?? DEFAULT_SUGGESTIONS.en),
+    [latest, language]
+  );
   const tabLabels = TAB_LABEL[language] ?? TAB_LABEL.en;
   const ui = UI[language] ?? UI.en;
 
