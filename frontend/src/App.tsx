@@ -751,7 +751,6 @@ export default function App() {
           <>
             <div className="grid min-h-0 flex-1 gap-4 p-3 sm:p-4 grid-cols-1 lg:grid-cols-[minmax(340px,1fr)_1.6fr] lg:grid-rows-1">
               <div className="flex flex-col gap-3 h-[500px] min-h-0 overflow-hidden lg:h-full">
-                <LocationPicker current={place} language={language} onPick={setPlace} />
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <ChatPanel
                     messages={messages}
@@ -767,7 +766,25 @@ export default function App() {
               </div>
 
               <div className={`flex flex-col min-h-[450px] lg:min-h-0 gap-3 [&>*]:shrink-0 ${latest ? "lg:overflow-y-auto" : ""}`}>
-                {latest && <ConditionsStrip res={latest} language={latest.language} />}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
+                  <div className="min-w-0">
+                    {latest ? (
+                      <ConditionsStrip res={latest} language={latest.language} />
+                    ) : (
+                      <div className="m-panel h-full flex flex-col justify-center px-4 py-3 text-[11px] text-ink-400">
+                        <div className="m-label text-[8px] uppercase tracking-wider text-ocean-dim mb-1">
+                          {language === "kn" ? "ಪ್ರಸ್ತುತ ಸ್ಥಿತಿ" : language === "hi" ? "वर्तमान स्थिति" : "Current Conditions"}
+                        </div>
+                        <div className="italic text-[10.5px]">
+                          {language === "kn" ? "ಉತ್ತರ ಬಂದಾಗ ಪ್ರಸ್ತುತ ಸ್ಥಿತಿ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ" : language === "hi" ? "उत्तर आने पर वर्तमान स्थिति यहाँ दिखेगी" : "Live sea conditions will appear here after query"}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <LocationPicker current={place} language={language} onPick={setPlace} />
+                  </div>
+                </div>
 
                 <MarineMap
                   origin={place ? { latitude: place.latitude, longitude: place.longitude } : (latest?.intent.location ?? homeOrigin)}

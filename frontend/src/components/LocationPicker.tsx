@@ -112,45 +112,47 @@ export default function LocationPicker({
     : PORTS;
 
   return (
-    <div ref={boxRef} className="panel relative z-[600] px-4 py-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div className="w-full min-w-0">
-          <div className="label">{t.yourLocation}</div>
-          <div className="mt-0.5 flex items-baseline gap-2.5">
-            <span className="truncate font-display text-[18px] font-bold leading-tight text-ink-900">
-              {current?.label ?? "—"}
+    <div ref={boxRef} className="panel relative z-[600] px-3 py-2 h-full flex flex-col justify-between">
+      <div>
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="label !text-[7.5px] !mb-0">{t.yourLocation}</div>
+          {current && (
+            <span className="font-mono text-[9.5px] tabular-nums text-ink-400">
+              {current.latitude.toFixed(2)}°N, {current.longitude.toFixed(2)}°E
             </span>
-            {current?.source === "gps" && (
-              <span className="shrink-0 border border-risk-low/70 px-1.5 py-px font-mono text-[8.5px] font-bold uppercase tracking-wider text-risk-low">
-                {t.gps}
-              </span>
-            )}
-            {current && (
-              <span className="basis-full shrink-0 whitespace-nowrap font-mono text-[10.5px] tabular-nums text-ink-400 sm:basis-auto">
-                {current.latitude.toFixed(3)}°N, {current.longitude.toFixed(3)}°E
-              </span>
-            )}
-          </div>
+          )}
         </div>
-
-        <div className="flex w-full flex-wrap gap-2">
-          <button onClick={useGps} disabled={status === "locating"} className="btn-line !py-1.5 disabled:opacity-55">
-            <CrosshairGlyph size={13} />
-            {status === "locating" ? t.locating : t.useGps}
-          </button>
-
-          <button onClick={() => setOpen((v) => !v)} className="btn-line !py-1.5">
-            {t.pickPort} ▾
-          </button>
+        <div className="mt-0.5 flex items-baseline gap-2">
+          <span className="truncate font-display text-[14px] font-bold leading-tight text-ink-900">
+            {current?.label ?? "—"}
+          </span>
+          {current?.source === "gps" && (
+            <span className="shrink-0 border border-risk-low/70 px-1 py-px font-mono text-[8px] font-bold uppercase tracking-wider text-risk-low">
+              {t.gps}
+            </span>
+          )}
         </div>
       </div>
 
-      {(status === "denied" || status === "error") && (
-        <p className="mt-2 text-[11.5px] font-medium text-risk-high">
-          {status === "denied" ? t.denied : t.unavailable}
-        </p>
-      )}
-      <p className="mt-1.5 text-[10.5px] italic text-ink-400">{t.tapMap}</p>
+      <div className="mt-1.5 flex items-center justify-between gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <button onClick={useGps} disabled={status === "locating"} className="btn-line !py-0.5 !px-2 !text-[10px] disabled:opacity-55">
+            <CrosshairGlyph size={11} />
+            {status === "locating" ? t.locating : t.useGps}
+          </button>
+
+          <button onClick={() => setOpen((v) => !v)} className="btn-line !py-0.5 !px-2 !text-[10px]">
+            {t.pickPort} ▾
+          </button>
+        </div>
+
+        {(status === "denied" || status === "error") && (
+          <p className="text-[10px] font-medium text-risk-high">
+            {status === "denied" ? t.denied : t.unavailable}
+          </p>
+        )}
+      </div>
+
 
       {open && (
         <div

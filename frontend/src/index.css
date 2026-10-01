@@ -1096,53 +1096,62 @@ path.zone-hatch-info     { fill: url(#hatch-info);     fill-opacity: 1; }
   border: 1px solid var(--border);
   border-radius: 3px;
   overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 .bridge-strip-hd {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 5px 14px 4px;
+  gap: 8px;
+  padding: 3px 8px 2px;
   border-bottom: 1px solid var(--border-mid);
   background: linear-gradient(180deg, rgba(0,168,204,0.08), transparent);
 }
 .bridge-strip-label {
   font-family: "Spline Sans Mono Variable", Consolas, monospace;
-  font-size: 8px;
+  font-size: 7.5px;
   font-weight: 800;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--ocean-dim);
 }
 .bridge-instruments {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(3, 1fr);
+  flex: 1;
 }
 .bridge-instrument {
-  padding: 8px 10px 9px;
+  padding: 3px 6px 4px;
   border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
-.bridge-instrument:last-child { border-right: none; }
+.bridge-instrument:nth-child(3n) { border-right: none; }
+.bridge-instrument:nth-last-child(-n+3) { border-bottom: none; }
+
 .bridge-instrument-label {
   font-family: "Spline Sans Mono Variable", Consolas, monospace;
-  font-size: 7.5px;
+  font-size: 7px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-faint);
-  margin-bottom: 4px;
-  truncate: true;
+  margin-bottom: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .bridge-instrument-val {
   font-family: "Spline Sans Mono Variable", Consolas, monospace;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 11.5px;
+  font-weight: 700;
   color: var(--text-bright);
-  line-height: 1;
+  line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
