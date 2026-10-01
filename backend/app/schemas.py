@@ -17,7 +17,7 @@ IntentCategory = Literal["fishing_safety", "find_pfz", "fishing_outlook", "route
 RiskCategory = Literal["LOW", "MODERATE", "HIGH", "EXTREME"]
 
 class StructuredResponse(BaseModel):
-    type: Literal["fishing_zones", "hazards", "routes", "weather", "historical", "none"] = "none"
+    type: Literal["fishing_zones", "hazards", "routes", "weather", "historical", "web_results", "none"] = "none"
     title: str = ""
     columns: List[str] = Field(default_factory=list)
     rows: List[List[Any]] = Field(default_factory=list)

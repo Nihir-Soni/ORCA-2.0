@@ -131,7 +131,9 @@ SOURCE_LABELS = {
     "OPEN_METEO": "Open-Meteo Marine (open fallback source)",
     "DEMO": "ORCA demo dataset — SIMULATED, not official data",
     "ORCA_GIS": "ORCA geospatial layer (OpenStreetMap derived)",
+    "WEB_SEARCH": "Live Internet Web Search",
 }
+
 
 # Text appended to every synthetic value so simulated data can never be
 # mistaken for a live government feed.

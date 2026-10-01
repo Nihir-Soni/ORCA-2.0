@@ -337,6 +337,64 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
             mode=mode,  # type: ignore[arg-type]
         )
 
+    # ── General query / Web search path ────────────────────────────────────
+    if getattr(intent, "intent", None) == "general_query":
+        web_res = agents.get("web")
+        web_d = web_res.data if (web_res and getattr(web_res, "ok", False)) else {}
+        web_results = web_d.get("results", []) if isinstance(web_d, dict) else []
+
+        srcs_gen = sorted({SOURCE_LABELS.get(a.source, a.source)
+                       for a in agents.values() if getattr(a, "ok", False) and a.source not in ("ORCA",)})
+
+        if chat_mode == "AI":
+            from ..services import groq_intent
+            context_data = {
+                "intent": intent.model_dump() if intent else None,
+                "weather": weather,
+                "ocean": ocean,
+                "cyclone": cyclone,
+                "gis": gis,
+                "web_search": web_results,
+                "sources": srcs_gen,
+            }
+            ai_answer = groq_intent.generate_explanation(context_data, lang)
+            if ai_answer:
+                return AgentResult(
+                    agent="explanation", ok=True,
+                    data={
+                        "answer": ai_answer,
+                        "evidence": [e.model_dump() for e in build_evidence(weather, ocean, cyclone, gis, agents)],
+                        "suggestions": SUGGESTIONS.get(lang, SUGGESTIONS["en"]),
+                        "disclaimer": t("disclaimer", lang),
+                    },
+                    source="WEB_SEARCH",
+                    timestamp=when.isoformat(timespec="seconds"),
+                    confidence=0.9,
+                    mode=mode,  # type: ignore[arg-type]
+                )
+
+        # OFFLINE fallback for general_query
+        if web_results:
+            snippets = [r.get("snippet", "") for r in web_results if r.get("snippet")][:3]
+            answer = f"Web Search info for {intent.location_text or 'the requested area'} [Source: Web Search]: " + " ".join(snippets)
+        else:
+            answer = f"No detailed web observations found for {intent.location_text or 'this location'} regarding '{intent.raw_query}'."
+
+        return AgentResult(
+            agent="explanation", ok=True,
+            data={
+                "answer": answer,
+                "evidence": [e.model_dump() for e in build_evidence(weather, ocean, cyclone, gis, agents)],
+                "suggestions": SUGGESTIONS.get(lang, SUGGESTIONS["en"]),
+                "disclaimer": t("disclaimer", lang),
+            },
+            source="WEB_SEARCH",
+            timestamp=when.isoformat(timespec="seconds"),
+            confidence=0.85,
+            mode=mode,  # type: ignore[arg-type]
+        )
+
+
     # ── Standard safety/risk path ──────────────────────────────────────────
 
     # ---- WHAT ------------------------------------------------------------
@@ -382,10 +440,15 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
         key = "geofence_inside" if alert.inside else "geofence_warn"
         parts.append(t(key, lang, zone=alert.zone_name, distance=alert.distance_km))
 
+    # ---- web search results ------------------------------------------------
+    web_res = agents.get("web")
+    web_d = web_res.data if (web_res and getattr(web_res, "ok", False)) else {}
+    web_results = web_d.get("results", []) if isinstance(web_d, dict) else []
+
     # ---- provenance ------------------------------------------------------
     # Only real data providers belong in the citation line — "ORCA" is us.
     srcs = sorted({SOURCE_LABELS.get(a.source, a.source)
-                   for a in agents.values() if a.ok and a.source not in ("ORCA",)})
+                   for a in agents.values() if getattr(a, "ok", False) and a.source not in ("ORCA",)})
     parts.append(f"{t('sources', lang)}: {', '.join(srcs)} · "
                  f"{t('updated', lang)} {when.strftime('%d %b %Y, %H:%M IST')}")
     if mode == "DEMO":
@@ -405,6 +468,7 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
             "cyclone": cyclone,
             "gis": gis,
             "historical": historical,
+            "web_search": web_results,
             "sources": srcs,
             "has_structured_table": structured.type if structured else None
         }
@@ -412,6 +476,11 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
         ai_answer = groq_intent.generate_explanation(context_data, lang)
         if ai_answer:
             answer = ai_answer
+    elif intent.intent == "general_query" and web_results:
+        snippets = [r.get("snippet", "") for r in web_results if r.get("snippet")][:3]
+        if snippets:
+            loc = intent.location_text or "the area"
+            answer = f"Information for {loc} [Source: Web Search]: " + " ".join(snippets)
 
     res_data = {
         "answer": answer,

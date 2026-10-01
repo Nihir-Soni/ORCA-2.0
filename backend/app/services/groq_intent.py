@@ -93,6 +93,7 @@ def extract_intent(message: str) -> Dict[str, Any]:
         "needs must be a JSON array of specialist names. Do not invent coordinates "
         "or locations; use an empty location_text when none is stated.\n\n"
         "CRITICAL ROUTING RULES:\n"
+        "- Use general_query if the user asks about fish species, types of fish, local market prices, fish rates, harbour catches, or general marine knowledge. Include 'web' in needs.\n"
         "- Use historical_analysis if the query asks about TRENDS, CHANGES, or CONDITIONS OVER TIME. "
         "Signal words include: trend, trends, changed, changing, increased, decreased, rising, falling, "
         "productivity trend, marine productivity, fish productivity, ocean productivity, "
@@ -135,8 +136,20 @@ def generate_explanation(context_data: Dict[str, Any], language: str) -> str:
         "For every real-time measurement or safety warning, cite the data source in brackets "
         "at the end of the sentence, for example: 'The wave height is 2.5m [Source: INCOIS]'.\n\n"
     )
-    
-    if context_data.get("historical"):
+
+    if context_data.get("web_search"):
+        web_items = context_data.get("web_search", [])
+        web_text = "\n".join(f"- Snippet: {item.get('snippet')}" for item in web_items if item.get('snippet'))
+        prompt += (
+            "LIVE WEB SEARCH RESULTS FOR THIS QUERY:\n"
+            f"{web_text}\n\n"
+            "MANDATORY DIRECTIVES FOR THIS WEB QUERY:\n"
+            "1. Answer the user's question directly, accurately, and naturally in language '{language}' based on the Web Search Results above.\n"
+            "2. Name specific fish species, market prices, or catches found in the search snippets.\n"
+            "3. Do NOT output standard refusal templates like 'observations don't include information' or 'I cannot provide a list'. Answer directly using the snippets above!\n"
+            "4. Cite '[Source: Web Search]' at the end of your answer.\n\n"
+        )
+    elif context_data.get("historical"):
         prompt += (
             "HISTORICAL DATA RULES — STRICTLY ENFORCE ALL:\n"
             "- Use ONLY the supplied historical evidence. Do not invent values, dates, or provider results.\n"
@@ -151,20 +164,25 @@ def generate_explanation(context_data: Dict[str, Any], language: str) -> str:
             "not 'there are more fish here'.\n\n"
         )
     
+    if not context_data.get("web_search"):
+        prompt += (
+            "STRICT GROUNDING RULES — APPLY TO EVERY SATELLITE/OCEAN TELEMETRY RESPONSE:\n"
+            "1. Do NOT invent regional scientific knowledge not present in the evidence. "
+            "If the user asks which REGION has high CHL or SST, answer only if the evidence "
+            "contains spatial observations for multiple regions. If it does not, say: "
+            "'ORCA currently has observations for your selected location but does not have "
+            "enough spatially comparable observations to rank regions across the coast.'\n"
+            "2. Do NOT use words like 'usually', 'typically', 'known for', 'likely has', "
+            "'productive fishing grounds' unless the supplied evidence explicitly supports that claim.\n"
+            "3. Do NOT draw on LLM training knowledge about upwelling zones, coastal geography, "
+            "or typical fish habitats unless the question is purely educational and the evidence "
+            "context does not contain real-time or historical data that contradicts it.\n"
+            "4. If the evidence is insufficient to answer the question, say so clearly rather "
+            "than filling the gap with general knowledge.\n"
+        )
+
     prompt += (
-        "STRICT GROUNDING RULES — APPLY TO EVERY RESPONSE:\n"
-        "1. Do NOT invent regional scientific knowledge not present in the evidence. "
-        "If the user asks which REGION has high CHL or SST, answer only if the evidence "
-        "contains spatial observations for multiple regions. If it does not, say: "
-        "'ORCA currently has observations for your selected location but does not have "
-        "enough spatially comparable observations to rank regions across the coast.'\n"
-        "2. Do NOT use words like 'usually', 'typically', 'known for', 'likely has', "
-        "'productive fishing grounds' unless the supplied evidence explicitly supports that claim.\n"
-        "3. Do NOT draw on LLM training knowledge about upwelling zones, coastal geography, "
-        "or typical fish habitats unless the question is purely educational and the evidence "
-        "context does not contain real-time or historical data that contradicts it.\n"
-        "4. If the evidence is insufficient to answer the question, say so clearly rather "
-        "than filling the gap with general knowledge.\n"
+        "GENERAL OUTPUT FORMAT:\n"
         "5. Write in plain text only. No Markdown. Keep it conversational, short, "
         "and easy to read aloud. Write exactly 1 or 2 short paragraphs.\n"
         "6. ONLY answer the user's specific question (found in Context Data -> intent -> raw_query). "

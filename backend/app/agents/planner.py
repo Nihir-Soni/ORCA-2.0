@@ -31,7 +31,7 @@ from ..schemas import (AgentTrace, ChatRequest, ChatResponse, Evidence,
 from ..services.i18n import t
 from ..services.groq_intent import GroqIntentError
 from . import (cyclone_agent, explanation_agent, gis_agent, intent_agent,
-               ocean_agent, pfz_agent, risk_agent, route_agent, weather_agent)
+               ocean_agent, pfz_agent, risk_agent, route_agent, weather_agent, web_agent)
 from ..services.historical import analyze_historical_data
 
 # session_id -> last intent (gives follow-ups their context)
@@ -47,6 +47,7 @@ AGENT_SUMMARY = {
     "risk": lambda d: f"{d.get('score')}/100 {d.get('category')}",
     "route": lambda d: (f"{d.get('recommended', {}).get('distance_km')} km recommended"
                         if d.get("recommended") else "no route"),
+    "web": lambda d: f"{d.get('count', 0)} web results",
     "explanation": lambda d: "answer composed",
     "intent": lambda d: f"{d.get('intent')} @ {d.get('location_text') or 'unknown'} {d.get('time')}",
 }
@@ -124,7 +125,7 @@ def handle(req: ChatRequest) -> ChatResponse:
         # Add to trace
         trace.append(AgentTrace(agent="historical", status="ok", latency_ms=0, summary="Historical data fetched", source="UPSTASH", mode="HISTORICAL"))
     
-    with ThreadPoolExecutor(max_workers=5) as pool:
+    with ThreadPoolExecutor(max_workers=6) as pool:
         if "weather" in needs:
             jobs["weather"] = pool.submit(weather_agent.run, location, when)
         if "ocean" in needs:
@@ -135,7 +136,10 @@ def handle(req: ChatRequest) -> ChatResponse:
             jobs["cyclone"] = pool.submit(cyclone_agent.run, location, when)
         if "gis" in needs:
             jobs["gis"] = pool.submit(gis_agent.run, location, when)
+        if "web" in needs or "web_search" in needs or intent.intent == "general_query":
+            jobs["web"] = pool.submit(web_agent.run, req.message, location.name)
         results = {name: fut.result() for name, fut in jobs.items()}
+
 
     for name, res in results.items():
         agents[name] = res

@@ -14,3 +14,5 @@ shapely>=2.0           # spatial geometry calculations for LIVE INCOIS and IMD C
 copernicusmarine>=1.0.0
 xarray>=2023.0
 netCDF4>=1.6.0
+duckduckgo-search>=6.0.0
+

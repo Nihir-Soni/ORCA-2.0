@@ -80,7 +80,12 @@ INTENT_KEYWORDS: Dict[str, List[str]] = {
     ],
     "restricted": ["restricted", "boundary", "border", "prohibited", "प्रतिबंधित", "सीमा",
                    "बंदी", "निषिद्ध", "ನಿರ್ಬಂಧಿತ", "ಗಡಿ"],
+    "general_query": ["types of fish", "types of fishes", "fish species", "species", "market price", "fish price",
+                     "price of", "rate of", "how much is", "cost of", "bhav", "daam", "catches", "local market",
+                     "market rate", "bazaar", "मछली का भाव", "मछली की प्रजातियां", "मछली का रेट", "प्रजातियाँ",
+                     "ಮೀನಿನ ಬೆಲೆ", "ಯಾವ ಮೀನು", "price", "prices", "harbour catch", "typical fish"],
 }
+
 
 ACTIVITY_KEYWORDS = {
     "fishing": ["fish", "fishing", "ಮೀನು", "ಮೀನುಗಾರಿಕೆ", "मछली"],
@@ -156,7 +161,7 @@ def _extract_date_range(text: str, base: datetime) -> Tuple[Optional[str], Optio
 
 # Most specific question wins: "safest route to the fishing zone" is a ROUTE
 # question even though it also mentions fishing zones.
-INTENT_PRIORITY = ["emergency", "route", "historical_analysis", "fishing_safety", "find_pfz", "weather", "marine_conditions", "restricted", "alerts", "explain"]
+INTENT_PRIORITY = ["emergency", "general_query", "route", "historical_analysis", "fishing_safety", "find_pfz", "weather", "marine_conditions", "restricted", "alerts", "explain"]
 
 
 def _classify(text: str) -> str:
@@ -169,7 +174,7 @@ def _classify(text: str) -> str:
 
 def _intent_needs(intent_type: str, requested: Optional[List[str]] = None) -> List[str]:
     if requested:
-        allowed = {"weather", "ocean", "pfz", "route", "cyclone", "gis", "risk"}
+        allowed = {"weather", "ocean", "pfz", "route", "cyclone", "gis", "risk", "web"}
         needs = [item for item in requested if item in allowed]
         if needs:
             return list(dict.fromkeys([*SAFETY_CORE, *needs]))
@@ -213,6 +218,7 @@ EXTRA_BY_INTENT = {
     "alerts":         [],
     "restricted":     [],
     "explain":        [],
+    "general_query":  ["web"],
     "historical_analysis": [],  # handled via HISTORICAL_NEEDS below
 }
 
@@ -220,7 +226,11 @@ EXTRA_BY_INTENT = {
 def needs_for(intent_type: str) -> List[str]:
     if intent_type == "historical_analysis":
         return HISTORICAL_NEEDS
-    return SAFETY_CORE + EXTRA_BY_INTENT.get(intent_type, [])
+    needs = SAFETY_CORE + EXTRA_BY_INTENT.get(intent_type, [])
+    if intent_type == "general_query" and "web" not in needs:
+        needs.append("web")
+    return needs
+
 
 
 @timed
