@@ -195,26 +195,63 @@ def run(*, intent, risk: Optional[RiskAssessment], pfz: List[PFZZone],
     elif intent.intent in ("alerts", "emergency", "weather", "marine_conditions", "fishing_safety"):
         # Hazards combined table
         hazard_rows = []
+        seen_hazards = set()
+
         for alert in geofence:
+            name = alert.zone_name.strip()
+            sev = alert.severity.upper()
+            dedup_key = (name.lower(), sev)
+            if dedup_key in seen_hazards:
+                continue
+            seen_hazards.add(dedup_key)
             hazard_rows.append([
-                alert.zone_name,
-                alert.severity.upper(),
+                name,
+                sev,
                 f"{alert.distance_km:.1f} km",
                 "N/A",
                 "ORCA Geofence"
             ])
         
         alerts_list = cyclone.get("alerts", []) if isinstance(cyclone, dict) else []
+        target_name = intent.location.name if (intent and getattr(intent, "location", None)) else ""
+        target_state = intent.location.state if (intent and getattr(intent, "location", None)) else ""
+
         for a in alerts_list:
+            hazard_text = (a.get("headline") or a.get("event") or a.get("type", "Alert")).strip()
+            if not hazard_text:
+                continue
+
+            if target_name or target_state:
+                from ..data.providers.imd import is_alert_relevant_to_location
+                if not is_alert_relevant_to_location(
+                    a.get("location", ""),
+                    hazard_text,
+                    a.get("description", ""),
+                    a.get("sender", ""),
+                    target_name,
+                    target_state
+                ):
+                    continue
+
+            sev = str(a.get("severity", "")).upper() or "WARNING"
+            loc = a.get("location") or target_name or "Regional"
+            if target_name and target_name.lower() in hazard_text.lower():
+                loc = target_name
+            valid = a.get("valid_till") or "Active"
+            norm_key = (" ".join(hazard_text.split()).lower()[:120], sev)
+            if norm_key in seen_hazards:
+                continue
+            seen_hazards.add(norm_key)
+
             hazard_rows.append([
-                a.get("headline") or a.get("type", "Alert"),
-                str(a.get("severity", "")).upper(),
-                a.get("location", "Regional"),
-                a.get("valid_till", "Unknown"),
+                hazard_text,
+                sev,
+                loc,
+                valid,
                 a.get("source", "IMD")
             ])
             
-        if len(hazard_rows) > 1:
+        if len(hazard_rows) >= 1:
             structured = StructuredResponse(
                 type="hazards",
                 title="Marine Hazards & Alerts",

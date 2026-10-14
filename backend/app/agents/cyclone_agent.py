@@ -26,7 +26,13 @@ def run(location: Location, when: datetime) -> AgentResult:
     unavailable = []
 
     if live_enabled():
-        imd_res = imd_provider.fetch_alerts(location.latitude, location.longitude, when)
+        imd_res = imd_provider.fetch_alerts(
+            location.latitude,
+            location.longitude,
+            when,
+            location_name=location.name,
+            state=location.state,
+        )
         if imd_res:
             alerts = imd_res.data.get("alerts", [])
             mode = "LIVE"

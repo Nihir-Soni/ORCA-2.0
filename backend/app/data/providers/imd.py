@@ -1,3 +1,4 @@
+import re
 import threading
 import time
 import xml.etree.ElementTree as ET
@@ -9,6 +10,222 @@ from shapely.geometry import Point, Polygon
 
 from ...schemas import ProviderMetadata, ProviderResponse
 from . import BaseProvider
+from ..geo import nearest_port
+
+COASTAL_AND_REGIONAL_KEYWORDS: Dict[str, List[str]] = {
+    "tamil nadu": [
+        "tamil nadu", "tamilnadu", "chennai", "madras", "cuddalore", "nagapattinam",
+        "kancheepuram", "kanchipuram", "tiruvallur", "thiruvallur", "thoothukudi",
+        "thoothukkudi", "tuticorin", "ramanathapuram", "kanyakumari", "kanniyakumari",
+        "thanjavur", "thiruvarur", "tirunelveli", "tiruvannamalai", "viluppuram",
+        "ariyalur", "chengalpattu", "perambalur", "sivaganga", "madurai",
+        "coimbatore", "salem", "trichy", "vellore"
+    ],
+    "maharashtra": [
+        "maharashtra", "mumbai", "bombay", "konkan", "ratnagiri", "thane",
+        "palghar", "raigad", "sindhudurg", "sassoon", "alibag", "dahanu", "malvan"
+    ],
+    "goa": [
+        "goa", "panaji", "panjim", "mormugao", "north goa", "south goa", "vasco", "margao"
+    ],
+    "gujarat": [
+        "gujarat", "veraval", "saurashtra", "kutch", "kachchh", "jamnagar",
+        "bhavnagar", "porbandar", "junagadh", "amreli", "dwarka", "surat",
+        "valsad", "navsari", "bharuch", "okha", "mandvi"
+    ],
+    "kerala": [
+        "kerala", "kochi", "cochin", "thiruvananthapuram", "trivandrum",
+        "kozhikode", "calicut", "malabar", "kollam", "alappuzha", "ernakulam",
+        "kannur", "kasaragod", "kottayam", "thrissur", "malappuram", "munambam", "vizhinjam"
+    ],
+    "karnataka": [
+        "karnataka", "bangalore", "bengaluru", "mangalore", "mangaluru", "udupi",
+        "karwar", "uttara kannada", "dakshina kannada", "malpe", "bhatkal", "kumta"
+    ],
+    "andhra pradesh": [
+        "andhra", "visakhapatnam", "vizag", "srikakulam", "vizianagaram",
+        "east godavari", "west godavari", "krishna", "guntur", "prakasam",
+        "nellore", "kakinada", "machilipatnam", "bapatla", "tirupati"
+    ],
+    "odisha": [
+        "odisha", "orissa", "puri", "paradip", "paradeep", "bhubaneswar",
+        "cuttack", "balasore", "gopalpur", "ganjam", "bhadrak", "kendrapara",
+        "jagatsinghpur", "chandipur", "dhamra"
+    ],
+    "west bengal": [
+        "west bengal", "kolkata", "digha", "sundarbans", "sunderbans",
+        "haldia", "howrah", "south 24 parganas", "north 24 parganas", "purba medinipur",
+        "kakdwip", "namkhana", "frazerganj"
+    ],
+    "andaman & nicobar": [
+        "andaman", "nicobar", "port blair", "havelock", "neil", "car nicobar"
+    ],
+    "puducherry": [
+        "puducherry", "pondicherry", "karaikal", "mahe", "yanam"
+    ],
+    "lakshadweep": [
+        "lakshadweep", "kavaratti", "agatti", "minicoy", "andrott"
+    ],
+}
+
+OTHER_INLAND_STATES: Dict[str, List[str]] = {
+    "uttarakhand": ["uttarakhand", "uttaranchal", "dehradun", "haridwar", "tehri", "nainital", "chamoli", "rudraprayag", "pithoragarh", "bageshwar", "almora", "champawat", "pauri"],
+    "himachal pradesh": ["himachal", "shimla", "manali", "kullu", "kangra", "mandi", "dharamshala", "solan", "chamba", "una"],
+    "jammu & kashmir": ["jammu", "kashmir", "srinagar", "anantnag", "baramulla", "udhampur"],
+    "ladakh": ["ladakh", "leh", "kargil"],
+    "punjab": ["punjab", "amritsar", "ludhiana", "jalandhar", "patiala", "bathinda"],
+    "haryana": ["haryana", "gurgaon", "gurugram", "faridabad", "panipat", "ambala", "rohtak", "hisar"],
+    "delhi": ["delhi", "new delhi", "ncr"],
+    "rajasthan": ["rajasthan", "jaipur", "jodhpur", "udaipur", "bikaner", "kota", "ajmer"],
+    "uttar pradesh": ["uttar pradesh", "lucknow", "kanpur", "varanasi", "agra", "noida", "prayagraj", "ghaziabad", "meerut"],
+    "bihar": ["bihar", "patna", "gaya", "muzaffarpur", "bhagalpur", "darbhanga"],
+    "jharkhand": ["jharkhand", "ranchi", "jamshedpur", "dhanbad", "bokaro"],
+    "chhattisgarh": ["chhattisgarh", "raipur", "bilaspur", "durg", "bastar"],
+    "madhya pradesh": ["madhya pradesh", "bhopal", "indore", "gwalior", "jabalpur", "ujjain"],
+    "assam": ["assam", "guwahati", "silchar", "dibrugarh", "jorhat"],
+    "meghalaya": ["meghalaya", "shillong"],
+    "manipur": ["manipur", "imphal"],
+    "mizoram": ["mizoram", "aizawl"],
+    "nagaland": ["nagaland", "kohima", "dimapur"],
+    "tripura": ["tripura", "agartala"],
+    "arunachal pradesh": ["arunachal", "itanagar"],
+    "sikkim": ["sikkim", "gangtok"],
+    "telangana": ["telangana", "hyderabad", "warangal", "nizamabad", "karimnagar"],
+}
+
+CITY_DISTRICT_CLUSTERS: Dict[str, Dict[str, List[str]]] = {
+    "chennai": {
+        "primary": ["chennai", "madras", "chengalpattu", "thiruvallur", "tiruvallur", "kanchipuram", "kancheepuram"],
+        "coastal_subregion": ["north tamil nadu", "coromandel", "southwest bay of bengal"],
+        "other_state_districts": [
+            "cuddalore", "mayiladuthurai", "nagapattinam", "ramanathapuram", "thoothukudi", "thoothukkudi",
+            "kanyakumari", "kanniyakumari", "thiruvarur", "thanjavur", "tirunelveli", "madurai", "salem"
+        ]
+    },
+    "mumbai": {
+        "primary": ["mumbai", "bombay", "thane", "palghar", "raigad", "sassoon"],
+        "coastal_subregion": ["north maharashtra", "mumbai metropolitan", "konkan"],
+        "other_state_districts": ["ratnagiri", "sindhudurg", "malvan", "goa", "pune", "nashik"]
+    },
+    "ratnagiri": {
+        "primary": ["ratnagiri", "sindhudurg", "malvan", "raigad", "konkan"],
+        "coastal_subregion": ["south maharashtra", "konkan coast"],
+        "other_state_districts": ["mumbai", "palghar", "thane"]
+    },
+    "panaji (goa)": {
+        "primary": ["goa", "panaji", "panjim", "mormugao", "north goa", "south goa", "vasco", "margao"],
+        "coastal_subregion": ["goa coast", "konkan"],
+        "other_state_districts": ["mumbai", "karwar", "mangalore"]
+    },
+    "veraval": {
+        "primary": ["veraval", "gir somnath", "somnath", "junagadh", "amreli", "porbandar", "dwarka"],
+        "coastal_subregion": ["saurashtra", "gujarat coast", "northeast arabian sea"],
+        "other_state_districts": ["valsad", "navsari", "surat", "kutch", "kachchh", "ahmedabad"]
+    },
+    "kochi": {
+        "primary": ["kochi", "cochin", "ernakulam", "alappuzha", "thrissur", "kottayam"],
+        "coastal_subregion": ["central kerala", "kerala coast", "southeast arabian sea"],
+        "other_state_districts": ["kasaragod", "kannur", "kozhikode", "kollam", "thiruvananthapuram", "vizhinjam"]
+    },
+    "visakhapatnam": {
+        "primary": ["visakhapatnam", "vizag", "anakapalli", "vizianagaram", "srikakulam"],
+        "coastal_subregion": ["north coastal andhra", "andhra coast", "west central bay of bengal"],
+        "other_state_districts": ["kakinada", "machilipatnam", "bapatla", "prakasam", "nellore", "tirupati", "guntur", "krishna"]
+    },
+    "paradip": {
+        "primary": ["paradip", "paradeep", "jagatsinghpur", "kendrapara", "cuttack", "puri", "bhubaneswar"],
+        "coastal_subregion": ["odisha coast", "north bay of bengal"],
+        "other_state_districts": ["balasore", "bhadrak", "gopalpur", "ganjam"]
+    },
+    "digha": {
+        "primary": ["digha", "purba medinipur", "south 24 parganas", "north 24 parganas", "kolkata", "haldia", "kakdwip"],
+        "coastal_subregion": ["west bengal coast", "bengal coast", "sundarbans", "north bay of bengal"],
+        "other_state_districts": ["dhamra", "balasore", "paradip"]
+    },
+    "port blair": {
+        "primary": ["port blair", "andaman", "nicobar", "havelock", "neil", "car nicobar"],
+        "coastal_subregion": ["andaman sea", "southeast bay of bengal"],
+        "other_state_districts": []
+    }
+}
+
+
+def contains_word(text: str, word: str) -> bool:
+    """Check if word exists in text with whole-word boundaries."""
+    return bool(re.search(r"\b" + re.escape(word) + r"\b", text))
+
+
+def is_alert_relevant_to_location(
+    area_desc: str,
+    headline: str,
+    description: str,
+    sender: str,
+    target_name: str,
+    target_state: str,
+) -> bool:
+    """Checks if an alert belongs to the target location/state."""
+    alert_content = f"{area_desc} {headline} {description}".lower()
+    sender_lower = sender.lower()
+    combined = f"{alert_content} {sender_lower}"
+
+    t_name = target_name.lower().strip()
+    t_state = target_state.lower().strip()
+
+    target_key = None
+    for k in CITY_DISTRICT_CLUSTERS:
+        if k in t_name or t_name in k:
+            target_key = k
+            break
+
+    cluster = CITY_DISTRICT_CLUSTERS.get(target_key, {})
+    primary_kws = cluster.get("primary", [t_name] if t_name else [])
+    other_districts = cluster.get("other_state_districts", [])
+    subregion_kws = cluster.get("coastal_subregion", [])
+
+    # 1. Direct local match in the ALERT CONTENT (not sender agency name!)
+    for kw in primary_kws:
+        if len(kw) > 2 and contains_word(alert_content, kw):
+            return True
+
+    # 2. Check if alert belongs to other inland states (sender or content)
+    for other_st, other_kws in OTHER_INLAND_STATES.items():
+        if any(contains_word(combined, k) for k in other_kws if len(k) > 3):
+            return False
+
+    # 3. Check if sender is an SDMA of another state (e.g. Andhra Pradesh SDMA)
+    for other_st, other_kws in COASTAL_AND_REGIONAL_KEYWORDS.items():
+        if t_state and (other_st in t_state or t_state in other_st):
+            continue
+        sdma_tag = other_st.replace(" ", "-") + "-sdma"
+        if sdma_tag in sender_lower or contains_word(sender_lower, other_st):
+            return False
+
+    # 4. Check if it explicitly names other districts of the state, but NOT target location
+    for d in other_districts:
+        if len(d) > 3 and contains_word(alert_content, d):
+            return False
+
+    # 5. Check if alert content specifically names another coastal state (excluding 'bay of bengal')
+    clean_content = alert_content.replace("bay of bengal", "").replace("bengal sea", "")
+    for other_st, other_kws in COASTAL_AND_REGIONAL_KEYWORDS.items():
+        if t_state and (other_st in t_state or t_state in other_st):
+            continue
+        if contains_word(clean_content, other_st):
+            return False
+        if any(contains_word(clean_content, k) for k in other_kws[:3] if len(k) > 3 and k != "bengal"):
+            return False
+
+    # 6. Check subregion match in alert content
+    for kw in subregion_kws:
+        if contains_word(alert_content, kw):
+            return True
+
+    # 7. Statewide warning without exclusions
+    if t_state and contains_word(alert_content, t_state):
+        return True
+
+    return False
+
 
 class IMDProvider(BaseProvider):
     """Official cyclone warnings and marine alerts from IMD (via NDMA Sachet CAP Feed)."""
@@ -22,8 +239,20 @@ class IMDProvider(BaseProvider):
         self._lock = threading.Lock()
         self._client = httpx.Client(timeout=self.TIMEOUT)
 
-    def fetch_alerts(self, lat: float, lon: float, when: datetime) -> Optional[ProviderResponse]:
+    def fetch_alerts(
+        self,
+        lat: float,
+        lon: float,
+        when: datetime,
+        location_name: Optional[str] = None,
+        state: Optional[str] = None,
+    ) -> Optional[ProviderResponse]:
         """Fetch active cyclone warnings and fishermen advisories."""
+        if not state or not location_name:
+            port = nearest_port(lat, lon)
+            state = state or port.get("state", "")
+            location_name = location_name or port.get("name", "")
+
         cache_key = "imd_cap_alerts"
         now = time.time()
         
@@ -31,7 +260,7 @@ class IMDProvider(BaseProvider):
             if cache_key in self._cache:
                 data, ts = self._cache[cache_key]
                 if now - ts < self.CACHE_TTL:
-                    return self._process_alerts(data, lat, lon)
+                    return self._process_alerts(data, lat, lon, location_name, state)
 
         try:
             resp = self._client.get(self.RSS_FEED_URL)
@@ -62,15 +291,29 @@ class IMDProvider(BaseProvider):
             with self._lock:
                 self._cache[cache_key] = (alerts_data, now)
                 
-            return self._process_alerts(alerts_data, lat, lon)
+            return self._process_alerts(alerts_data, lat, lon, location_name, state)
         except Exception as e:
             print(f"[ORCA][LIVE][IMD] Failed to fetch NDMA RSS feed: {e}")
             return None
 
-    def _process_alerts(self, alerts_xml: List[str], lat: float, lon: float) -> ProviderResponse:
+    def _process_alerts(
+        self,
+        alerts_xml: List[str],
+        lat: float,
+        lon: float,
+        location_name: str = "",
+        state: str = "",
+    ) -> ProviderResponse:
+        if not location_name or not state:
+            port = nearest_port(lat, lon)
+            location_name = location_name or port.get("name", "")
+            state = state or port.get("state", "")
+
         boat_pt = Point(lon, lat)
         active_alerts = []
         
+        seen_keys = set()
+
         for xml_text in alerts_xml:
             try:
                 root = ET.fromstring(xml_text)
@@ -88,8 +331,10 @@ class IMDProvider(BaseProvider):
                 severity = info.find("cap:severity", ns)
                 headline = info.find("cap:headline", ns)
                 description = info.find("cap:description", ns)
+                expires = info.find("cap:expires", ns)
                 
                 area = info.find("cap:area", ns)
+                area_desc = area.find("cap:areaDesc", ns) if area is not None else None
                 is_inside = False
                 geom_found = False
                 
@@ -127,18 +372,51 @@ class IMDProvider(BaseProvider):
                                 if dist <= radius_km:
                                     is_inside = True
 
-                # Include if the boat is inside the geometry, or if it has no geometry (global alert)
-                if is_inside or not geom_found:
-                    active_alerts.append({
-                        "identifier": identifier.text if identifier is not None else "Unknown",
-                        "sender": sender.text if sender is not None else "IMD",
-                        "event": event.text if event is not None else "Marine Alert",
-                        "severity": severity.text if severity is not None else "Unknown",
-                        "headline": headline.text if headline is not None else "",
-                        "description": description.text if description is not None else "",
-                        "spatial": geom_found,
-                        "inside_geometry": is_inside
-                    })
+                # Regional filter: check spatial geometry or text-based regional matching
+                headline_text = headline.text.strip() if headline is not None and headline.text else ""
+                event_text = event.text.strip() if event is not None and event.text else "Marine Alert"
+                desc_text = description.text.strip() if description is not None and description.text else ""
+                sender_text = sender.text.strip() if sender is not None and sender.text else "IMD"
+                area_text = area_desc.text.strip() if area_desc is not None and area_desc.text else ""
+
+                if geom_found and is_inside:
+                    sender_lower = sender_text.lower()
+                    if state and any(f"{other_st.replace(' ', '-')}-sdma" in sender_lower
+                                     for other_st in COASTAL_AND_REGIONAL_KEYWORDS
+                                     if other_st not in state.lower() and state.lower() not in other_st):
+                        is_relevant = False
+                    else:
+                        is_relevant = True
+                elif not geom_found:
+                    is_relevant = is_alert_relevant_to_location(
+                        area_text, headline_text, desc_text, sender_text, location_name, state
+                    )
+                else:
+                    is_relevant = False
+
+                if not is_relevant:
+                    continue
+
+                # Deduplicate alerts with identical headline or event
+                alert_key = (headline_text.lower() or event_text.lower(), (severity.text or "").lower())
+                if alert_key in seen_keys:
+                    continue
+                seen_keys.add(alert_key)
+
+                loc_disp = location_name if (location_name and location_name.lower() in f"{area_text} {headline_text}".lower()) else (area_text or location_name or "Regional")
+
+                active_alerts.append({
+                    "identifier": identifier.text if identifier is not None else "Unknown",
+                    "sender": sender_text,
+                    "event": event_text,
+                    "severity": severity.text if severity is not None else "Unknown",
+                    "headline": headline_text,
+                    "description": desc_text,
+                    "location": loc_disp,
+                    "valid_till": expires.text.strip() if expires is not None and expires.text else "Active",
+                    "spatial": geom_found,
+                    "inside_geometry": is_inside
+                })
                     
             except Exception as e:
                 print(f"[ORCA][LIVE][IMD] Error parsing CAP XML: {e}")
