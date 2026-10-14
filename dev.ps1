@@ -11,10 +11,15 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $env:PYTHONIOENCODING = "utf-8"
 if (-not $env:ORCA_DATA_MODE) { $env:ORCA_DATA_MODE = "DEMO" }
 
+$py = "python"
+if (Test-Path "$root\.venv\Scripts\python.exe") {
+    $py = "$root\.venv\Scripts\python.exe"
+}
+
 Write-Host "Starting ORCA backend (reload) on :8000 ..." -ForegroundColor Cyan
 Start-Process powershell -ArgumentList @(
     "-NoExit", "-Command",
-    "Set-Location '$root\backend'; `$env:PYTHONIOENCODING='utf-8'; `$env:ORCA_DATA_MODE='$env:ORCA_DATA_MODE'; python -m uvicorn app.main:app --reload --port 8000"
+    "Set-Location '$root\backend'; `$env:PYTHONIOENCODING='utf-8'; `$env:ORCA_DATA_MODE='$env:ORCA_DATA_MODE'; & '$py' -m uvicorn app.main:app --reload --port 8000"
 )
 
 Start-Sleep -Seconds 2

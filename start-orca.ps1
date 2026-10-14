@@ -29,6 +29,25 @@ if (-not (Test-Path $dist)) {
     Pop-Location
 }
 
+# Resolve Python interpreter (.venv preferred)
+$py = "python"
+if (Test-Path (Join-Path $root ".venv\Scripts\python.exe")) {
+    $py = (Join-Path $root ".venv\Scripts\python.exe")
+} elseif (Test-Path (Join-Path $backend ".venv\Scripts\python.exe")) {
+    $py = (Join-Path $backend ".venv\Scripts\python.exe")
+}
+
+& $py -c "import uvicorn, fastapi" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  ! Backend dependencies missing. Installing..." -ForegroundColor Yellow
+    if (-not (Test-Path (Join-Path $root ".venv\Scripts\python.exe"))) {
+        Write-Host "  ! Creating Python virtual environment (.venv)..." -ForegroundColor Yellow
+        python -m venv (Join-Path $root ".venv")
+        $py = (Join-Path $root ".venv\Scripts\python.exe")
+    }
+    & $py -m pip install -r (Join-Path $backend "requirements.txt")
+}
+
 $env:PYTHONIOENCODING = "utf-8"
 if ($Live) {
     $env:ORCA_DATA_MODE = "LIVE"
@@ -80,7 +99,7 @@ if (-not $NoBrowser) {
 }
 
 Set-Location $backend
-python -m uvicorn app.main:app --host 127.0.0.1 --port $Port --env-file ..\.env
+& $py -m uvicorn app.main:app --host 127.0.0.1 --port $Port --env-file ..\.env
 
 
 

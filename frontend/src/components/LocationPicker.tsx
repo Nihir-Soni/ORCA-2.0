@@ -63,10 +63,12 @@ export default function LocationPicker({
   current,
   language = "en",
   onPick,
+  className = "",
 }: {
   current: PickedLocation | null;
   language?: Language;
   onPick: (loc: PickedLocation) => void;
+  className?: string;
 }) {
   const t = T[language] ?? T.en;
   const [status, setStatus] = useState<"idle" | "locating" | "denied" | "error">("idle");
@@ -112,7 +114,7 @@ export default function LocationPicker({
     : PORTS;
 
   return (
-    <div ref={boxRef} className="panel relative z-[600] px-3 py-2 h-full flex flex-col justify-between">
+    <div ref={boxRef} className={`panel relative z-[600] px-3.5 py-2.5 flex flex-col gap-2 shrink-0 ${className}`}>
       <div>
         <div className="flex items-center justify-between gap-1.5">
           <div className="label !text-[7.5px] !mb-0">{t.yourLocation}</div>
@@ -134,24 +136,29 @@ export default function LocationPicker({
         </div>
       </div>
 
-      <div className="mt-1.5 flex items-center justify-between gap-1.5 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <button onClick={useGps} disabled={status === "locating"} className="btn-line !py-0.5 !px-2 !text-[10px] disabled:opacity-55">
-            <CrosshairGlyph size={11} />
-            {status === "locating" ? t.locating : t.useGps}
-          </button>
+      <div className="flex items-center gap-1.5 w-full">
+        <button
+          onClick={useGps}
+          disabled={status === "locating"}
+          className="btn-line flex-1 !py-1 !px-2 !text-[10px] justify-center text-center disabled:opacity-55"
+        >
+          <CrosshairGlyph size={11} />
+          {status === "locating" ? t.locating : t.useGps}
+        </button>
 
-          <button onClick={() => setOpen((v) => !v)} className="btn-line !py-0.5 !px-2 !text-[10px]">
-            {t.pickPort} ▾
-          </button>
-        </div>
-
-        {(status === "denied" || status === "error") && (
-          <p className="text-[10px] font-medium text-risk-high">
-            {status === "denied" ? t.denied : t.unavailable}
-          </p>
-        )}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="btn-line flex-1 !py-1 !px-2 !text-[10px] justify-center text-center"
+        >
+          {t.pickPort} ▾
+        </button>
       </div>
+
+      {(status === "denied" || status === "error") && (
+        <p className="text-[10px] font-medium text-risk-high">
+          {status === "denied" ? t.denied : t.unavailable}
+        </p>
+      )}
 
 
       {open && (

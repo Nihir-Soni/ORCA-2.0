@@ -808,7 +808,7 @@ export default function App() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <LocationPicker current={place} language={language} onPick={setPlace} />
+                    <LocationPicker current={place} language={language} onPick={setPlace} className="h-full justify-between" />
                   </div>
                 </div>
 
